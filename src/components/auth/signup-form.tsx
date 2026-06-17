@@ -56,6 +56,7 @@ export function SignUpForm() {
           last_name: data.last_name,
           display_name: data.display_name,
         },
+        emailRedirectTo: "https://thunder-league-latest.vercel.app",
       },
     });
 
