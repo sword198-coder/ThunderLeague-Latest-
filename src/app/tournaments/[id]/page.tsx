@@ -99,6 +99,14 @@ export default function TournamentDetailPage() {
       setLoading(false);
     };
     load();
+
+    const channel = supabase
+      .channel(`tournament-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tournament_matches", filter: `tournament_id=eq.${id}` }, () => { load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "tournament_participants", filter: `tournament_id=eq.${id}` }, () => { load(); })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [id]);
 
   if (authLoading || loading) {

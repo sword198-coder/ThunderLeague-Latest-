@@ -19,14 +19,16 @@ export function NotificationsBell() {
   const supabase = createClient();
 
   useEffect(() => {
+    let currentUserId: string | undefined;
+
     const fetchNotifications = async () => {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
+      currentUserId = (await supabase.auth.getUser()).data.user?.id;
       const userCreatedAt = profile?.created_at;
 
       let query = supabase
         .from("notifications")
         .select("*")
-        .or(userId ? `is_global.eq.true,user_id.eq.${userId}` : "is_global.eq.true");
+        .or(currentUserId ? `is_global.eq.true,user_id.eq.${currentUserId}` : "is_global.eq.true");
 
       if (userCreatedAt) {
         query = query.gte("created_at", userCreatedAt);
@@ -52,7 +54,8 @@ export function NotificationsBell() {
         (payload) => {
           const n = payload.new as Notification;
           if (profile?.created_at && new Date(n.created_at) < new Date(profile.created_at)) return;
-          setNotifications((prev) => [n, ...prev]);
+          if (n.user_id && n.user_id !== currentUserId) return;
+          setNotifications((prev) => { if (prev.some((x) => x.id === n.id)) return prev; return [n, ...prev]; });
           setUnreadCount((prev) => prev + 1);
         }
       )
