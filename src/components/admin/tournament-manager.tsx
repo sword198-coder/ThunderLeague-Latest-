@@ -648,7 +648,7 @@ export function TournamentManager() {
               )}
 
               <Button size="sm" onClick={createMatch} disabled={
-                manageTournament!.system === "1v1" ? (!newMatchP1 || !newMatchP2) : (newMatchT1.length === 0 || newMatchT2.length === 0)
+                manageTournament?.system === "1v1" ? (!newMatchP1 || !newMatchP2) : (newMatchT1.length === 0 || newMatchT2.length === 0)
               }>
                 <Plus className="h-3 w-3 mr-1" />
                 Create Match

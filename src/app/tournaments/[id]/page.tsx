@@ -23,7 +23,7 @@ export default function TournamentDetailPage() {
   const supabase = createClient();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
-  const [participants, setParticipants] = useState<(TournamentParticipant & { name: string; username: string })[]>([]);
+  const [participants, setParticipants] = useState<(TournamentParticipant & { name: string; username: string; avatar_url: string | null })[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function TournamentDetailPage() {
 
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, username, display_name")
+        .select("id, username, display_name, avatar_url")
         .in("id", (pData ?? []).map((p) => p.user_id));
 
       const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
@@ -60,6 +60,7 @@ export default function TournamentDetailPage() {
             ...p,
             name: prof?.display_name || prof?.username || "Unknown",
             username: prof?.username || "unknown",
+            avatar_url: prof?.avatar_url || null,
           };
         })
       );
@@ -97,7 +98,7 @@ export default function TournamentDetailPage() {
   }
 
   const rounds = [...new Set(matches.map((m) => m.round))].sort();
-  const profileMap = new Map(participants.map((p) => [p.user_id, { name: p.name, username: p.username }]));
+  const profileMap = new Map(participants.map((p) => [p.user_id, { name: p.name, username: p.username, avatar_url: p.avatar_url }]));
   const approvedCount = participants.filter((p) => p.status === "approved").length;
 
   const statusIcon = (status: string) => {
@@ -182,14 +183,18 @@ export default function TournamentDetailPage() {
                   p.status === "pending" ? "border-yellow-500/20 bg-yellow-500/5" :
                   "border-red-500/20 bg-red-500/5"
                 )}>
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
-                    p.status === "approved" ? "bg-green-500/20 text-green-500" :
-                    p.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
-                    "bg-red-500/20 text-red-500"
-                  )}>
-                    {p.name.charAt(0).toUpperCase()}
-                  </div>
+                  {p.avatar_url ? (
+                    <img src={p.avatar_url} alt={p.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                      p.status === "approved" ? "bg-green-500/20 text-green-500" :
+                      p.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+                      "bg-red-500/20 text-red-500"
+                    )}>
+                      {p.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{p.name}</p>
                     <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
@@ -266,9 +271,13 @@ export default function TournamentDetailPage() {
                                   "flex items-center gap-3 p-3 rounded-lg border",
                                   m.winner_id === m.player1_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
                                 )}>
-                                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
-                                    {getPlayerInfo(m.player1_id)?.name?.charAt(0).toUpperCase() ?? "?"}
-                                  </div>
+                                  {getPlayerInfo(m.player1_id)?.avatar_url ? (
+                                    <img src={getPlayerInfo(m.player1_id)?.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
+                                      {getPlayerInfo(m.player1_id)?.name?.charAt(0).toUpperCase() ?? "?"}
+                                    </div>
+                                  )}
                                   <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-sm truncate">
                                       {getPlayerInfo(m.player1_id)?.name ?? "TBD"}
@@ -294,9 +303,13 @@ export default function TournamentDetailPage() {
                                   "flex items-center gap-3 p-3 rounded-lg border",
                                   m.winner_id === m.player2_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
                                 )}>
-                                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
-                                    {getPlayerInfo(m.player2_id)?.name?.charAt(0).toUpperCase() ?? "?"}
-                                  </div>
+                                  {getPlayerInfo(m.player2_id)?.avatar_url ? (
+                                    <img src={getPlayerInfo(m.player2_id)?.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
+                                      {getPlayerInfo(m.player2_id)?.name?.charAt(0).toUpperCase() ?? "?"}
+                                    </div>
+                                  )}
                                   <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-sm truncate">
                                       {getPlayerInfo(m.player2_id)?.name ?? "TBD"}
@@ -327,9 +340,13 @@ export default function TournamentDetailPage() {
                                         const p = getPlayerInfo(pid);
                                         return (
                                           <div key={pid} className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0">
-                                              {p?.name?.charAt(0).toUpperCase() ?? "?"}
-                                            </div>
+                                            {p?.avatar_url ? (
+                                              <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                                            ) : (
+                                              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0">
+                                                {p?.name?.charAt(0).toUpperCase() ?? "?"}
+                                              </div>
+                                            )}
                                             <span className="text-xs truncate">{p?.name ?? "Unknown"}</span>
                                           </div>
                                         );
@@ -350,9 +367,13 @@ export default function TournamentDetailPage() {
                                         const p = getPlayerInfo(pid);
                                         return (
                                           <div key={pid} className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0">
-                                              {p?.name?.charAt(0).toUpperCase() ?? "?"}
-                                            </div>
+                                            {p?.avatar_url ? (
+                                              <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                                            ) : (
+                                              <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0">
+                                                {p?.name?.charAt(0).toUpperCase() ?? "?"}
+                                              </div>
+                                            )}
                                             <span className="text-xs truncate">{p?.name ?? "Unknown"}</span>
                                           </div>
                                         );
