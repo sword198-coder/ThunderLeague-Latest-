@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass } from "lucide-react";
 import { format } from "date-fns";
@@ -25,6 +25,7 @@ export default function TournamentDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
   const [participants, setParticipants] = useState<(TournamentParticipant & { name: string; username: string; avatar_url: string | null })[]>([]);
+  const extraProfilesRef = useRef<Map<string, { name: string; username: string; avatar_url: string | null; country: string | null; vehicle: string | null }>>(new Map());
   const nationLabel = (code: string | null) => WT_NATIONS.find((n) => n.code === code)?.label ?? code ?? "";
   const [loading, setLoading] = useState(true);
 
@@ -87,6 +88,14 @@ export default function TournamentDetailPage() {
         })
       );
 
+      const extraMap = new Map<string, { name: string; username: string; avatar_url: string | null; country: string | null; vehicle: string | null }>();
+      (profiles ?? []).forEach((prof) => {
+        if (!(pData ?? []).some((p) => p.user_id === prof.id)) {
+          extraMap.set(prof.id, { name: prof.display_name || prof.username || "Unknown", username: prof.username || "unknown", avatar_url: prof.avatar_url || null, country: null, vehicle: null });
+        }
+      });
+      extraProfilesRef.current = extraMap;
+
       setLoading(false);
     };
     load();
@@ -113,6 +122,7 @@ export default function TournamentDetailPage() {
 
   const rounds = [...new Set(matches.map((m) => m.round))].sort();
   const profileMap = new Map(participants.map((p) => [p.user_id, { name: p.name, username: p.username, avatar_url: p.avatar_url, country: p.country, vehicle: p.vehicle }]));
+  extraProfilesRef.current.forEach((v, k) => { if (!profileMap.has(k)) profileMap.set(k, v); });
   const approvedCount = participants.filter((p) => p.status === "approved").length;
 
   const statusIcon = (status: string) => {
