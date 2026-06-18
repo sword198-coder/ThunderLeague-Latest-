@@ -55,7 +55,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="fixed inset-0 opacity-40 pointer-events-none"
+      <div className="fixed inset-0 pointer-events-none"
         style={{
           backgroundImage: "url(/leaderbackground.png)",
           backgroundSize: "cover",
