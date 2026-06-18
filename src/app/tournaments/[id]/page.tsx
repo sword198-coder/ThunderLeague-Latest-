@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import type { Tournament, TournamentMatch, TournamentParticipant } from "@/lib/types";
+import { WT_NATIONS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ export default function TournamentDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
   const [participants, setParticipants] = useState<(TournamentParticipant & { name: string; username: string; avatar_url: string | null })[]>([]);
+  const nationLabel = (code: string | null) => WT_NATIONS.find((n) => n.code === code)?.label ?? code ?? "";
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,15 +44,33 @@ export default function TournamentDetailPage() {
       if (!tData) { setLoading(false); return; }
       setTournament(tData);
 
+      const { data: mData } = await supabase
+        .from("tournament_matches")
+        .select("*")
+        .eq("tournament_id", id)
+        .order("round", { ascending: true })
+        .order("match_index", { ascending: true });
+      setMatches(mData ?? []);
+
+      const matchPlayerIds = new Set<string>();
+      (mData ?? []).forEach((m) => {
+        if (m.player1_id) matchPlayerIds.add(m.player1_id);
+        if (m.player2_id) matchPlayerIds.add(m.player2_id);
+        m.team1_player_ids?.forEach((pid: string) => matchPlayerIds.add(pid));
+        m.team2_player_ids?.forEach((pid: string) => matchPlayerIds.add(pid));
+      });
+
       const { data: pData } = await supabase
         .from("tournament_participants")
         .select("*")
         .eq("tournament_id", id);
 
+      const allUserIds = new Set([...(pData ?? []).map((p) => p.user_id), ...matchPlayerIds]);
+
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, username, display_name, avatar_url")
-        .in("id", (pData ?? []).map((p) => p.user_id));
+        .in("id", [...allUserIds]);
 
       const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
       setParticipants(
@@ -61,17 +81,11 @@ export default function TournamentDetailPage() {
             name: prof?.display_name || prof?.username || "Unknown",
             username: prof?.username || "unknown",
             avatar_url: prof?.avatar_url || null,
+            country: p.country || null,
+            vehicle: p.vehicle || null,
           };
         })
       );
-
-      const { data: mData } = await supabase
-        .from("tournament_matches")
-        .select("*")
-        .eq("tournament_id", id)
-        .order("round", { ascending: true })
-        .order("match_index", { ascending: true });
-      setMatches(mData ?? []);
 
       setLoading(false);
     };
@@ -98,7 +112,7 @@ export default function TournamentDetailPage() {
   }
 
   const rounds = [...new Set(matches.map((m) => m.round))].sort();
-  const profileMap = new Map(participants.map((p) => [p.user_id, { name: p.name, username: p.username, avatar_url: p.avatar_url }]));
+  const profileMap = new Map(participants.map((p) => [p.user_id, { name: p.name, username: p.username, avatar_url: p.avatar_url, country: p.country, vehicle: p.vehicle }]));
   const approvedCount = participants.filter((p) => p.status === "approved").length;
 
   const statusIcon = (status: string) => {
@@ -283,9 +297,16 @@ export default function TournamentDetailPage() {
                                       {getPlayerInfo(m.player1_id)?.name ?? "TBD"}
                                     </p>
                                     {getPlayerInfo(m.player1_id) && (
-                                      <p className="text-xs text-muted-foreground truncate">
-                                        @{getPlayerInfo(m.player1_id)?.username}
-                                      </p>
+                                      <>
+                                        <p className="text-xs text-muted-foreground truncate">
+                                          @{getPlayerInfo(m.player1_id)?.username}
+                                        </p>
+                                        {(getPlayerInfo(m.player1_id)?.country || getPlayerInfo(m.player1_id)?.vehicle) && (
+                                          <p className="text-[11px] text-muted-foreground/70 truncate">
+                                            {nationLabel(getPlayerInfo(m.player1_id)?.country ?? null)}{getPlayerInfo(m.player1_id)?.country && getPlayerInfo(m.player1_id)?.vehicle ? " · " : ""}{getPlayerInfo(m.player1_id)?.vehicle ?? ""}
+                                          </p>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                   {m.winner_id === m.player1_id && (
@@ -315,9 +336,16 @@ export default function TournamentDetailPage() {
                                       {getPlayerInfo(m.player2_id)?.name ?? "TBD"}
                                     </p>
                                     {getPlayerInfo(m.player2_id) && (
-                                      <p className="text-xs text-muted-foreground truncate">
-                                        @{getPlayerInfo(m.player2_id)?.username}
-                                      </p>
+                                      <>
+                                        <p className="text-xs text-muted-foreground truncate">
+                                          @{getPlayerInfo(m.player2_id)?.username}
+                                        </p>
+                                        {(getPlayerInfo(m.player2_id)?.country || getPlayerInfo(m.player2_id)?.vehicle) && (
+                                          <p className="text-[11px] text-muted-foreground/70 truncate">
+                                            {nationLabel(getPlayerInfo(m.player2_id)?.country ?? null)}{getPlayerInfo(m.player2_id)?.country && getPlayerInfo(m.player2_id)?.vehicle ? " · " : ""}{getPlayerInfo(m.player2_id)?.vehicle ?? ""}
+                                          </p>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                   {m.winner_id === m.player2_id && (
@@ -339,15 +367,22 @@ export default function TournamentDetailPage() {
                                       m.team1_player_ids.map((pid) => {
                                         const p = getPlayerInfo(pid);
                                         return (
-                                          <div key={pid} className="flex items-center gap-2">
+                                          <div key={pid} className="flex items-start gap-2">
                                             {p?.avatar_url ? (
-                                              <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                                              <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
                                             ) : (
-                                              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0">
+                                              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0 mt-0.5">
                                                 {p?.name?.charAt(0).toUpperCase() ?? "?"}
                                               </div>
                                             )}
-                                            <span className="text-xs truncate">{p?.name ?? "Unknown"}</span>
+                                            <div className="min-w-0">
+                                              <p className="text-xs truncate font-medium">{p?.name ?? "Unknown"}</p>
+                                              {(p?.country || p?.vehicle) && (
+                                                <p className="text-[10px] text-muted-foreground/70 truncate">
+                                                  {nationLabel(p?.country ?? null)}{p?.country && p?.vehicle ? " · " : ""}{p?.vehicle ?? ""}
+                                                </p>
+                                              )}
+                                            </div>
                                           </div>
                                         );
                                       })
@@ -366,15 +401,22 @@ export default function TournamentDetailPage() {
                                       m.team2_player_ids.map((pid) => {
                                         const p = getPlayerInfo(pid);
                                         return (
-                                          <div key={pid} className="flex items-center gap-2">
+                                          <div key={pid} className="flex items-start gap-2">
                                             {p?.avatar_url ? (
-                                              <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                                              <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
                                             ) : (
-                                              <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0">
+                                              <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0 mt-0.5">
                                                 {p?.name?.charAt(0).toUpperCase() ?? "?"}
                                               </div>
                                             )}
-                                            <span className="text-xs truncate">{p?.name ?? "Unknown"}</span>
+                                            <div className="min-w-0">
+                                              <p className="text-xs truncate font-medium">{p?.name ?? "Unknown"}</p>
+                                              {(p?.country || p?.vehicle) && (
+                                                <p className="text-[10px] text-muted-foreground/70 truncate">
+                                                  {nationLabel(p?.country ?? null)}{p?.country && p?.vehicle ? " · " : ""}{p?.vehicle ?? ""}
+                                                </p>
+                                              )}
+                                            </div>
                                           </div>
                                         );
                                       })
@@ -383,7 +425,6 @@ export default function TournamentDetailPage() {
                                 </div>
                               </div>
                             )}
-
                             {m.scheduled_at && (
                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-2 border-t">
                                 <Clock className="h-3 w-3" />

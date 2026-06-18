@@ -627,20 +627,21 @@ export function TournamentManager() {
                     </div>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-xs text-muted-foreground mb-1.5">Available players (click to assign):</p>
+                    <p className="text-xs text-muted-foreground mb-1.5">Available players:</p>
                     <div className="flex flex-wrap gap-1.5">
                       {approvedPlayers.filter((p) => !newMatchT1.includes(p.id) && !newMatchT2.includes(p.id)).map((p) => (
-                        <Badge key={p.id} variant="outline" className="text-xs cursor-pointer hover:bg-primary/10"
-                          onClick={() => {
-                            if (newMatchT1.length <= newMatchT2.length) {
-                              setNewMatchT1([...newMatchT1, p.id]);
-                            } else {
-                              setNewMatchT2([...newMatchT2, p.id]);
-                            }
-                          }}
-                        >
-                          {p.name} +
-                        </Badge>
+                        <div key={p.id} className="flex gap-1">
+                          <Badge variant="outline" className="text-xs cursor-pointer hover:bg-blue-500/20 border-blue-500/30"
+                            onClick={() => setNewMatchT1([...newMatchT1, p.id])}
+                          >
+                            {p.name} → T1
+                          </Badge>
+                          <Badge variant="outline" className="text-xs cursor-pointer hover:bg-purple-500/20 border-purple-500/30"
+                            onClick={() => setNewMatchT2([...newMatchT2, p.id])}
+                          >
+                            {p.name} → T2
+                          </Badge>
+                        </div>
                       ))}
                     </div>
                   </div>
