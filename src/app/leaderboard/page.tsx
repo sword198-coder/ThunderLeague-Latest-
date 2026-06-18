@@ -54,7 +54,15 @@ export default async function LeaderboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 relative">
+      <div className="fixed inset-0 -z-10 opacity-[0.07] pointer-events-none"
+        style={{
+          backgroundImage: "url(/leaderbackground.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
         <p className="text-muted-foreground">Top Tournaments players</p>

@@ -74,11 +74,31 @@ export function SupportManager() {
   const updateTicket = async (id: string, updates: Partial<SupportTicket>) => {
     setSaving(true);
     const { error } = await supabase.from("support_tickets").update(updates).eq("id", id);
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast.error("Failed to update ticket");
       return;
     }
+    const ticket = tickets.find((t) => t.id === id);
+    if (ticket) {
+      let title = "Support Ticket Updated";
+      let message = `Your ticket "${ticket.subject}" has been updated.`;
+      if (updates.admin_reply && updates.admin_reply !== ticket.admin_reply) {
+        title = "New Reply on Your Ticket";
+        message = `Admin replied to your ticket "${ticket.subject}".`;
+      } else if (updates.status && updates.status !== ticket.status) {
+        const labels: Record<string, string> = { open: "Open", in_progress: "In Progress", resolved: "Resolved", closed: "Closed" };
+        title = "Ticket Status Changed";
+        message = `Your ticket "${ticket.subject}" status changed to "${labels[updates.status] || updates.status}".`;
+      }
+      await supabase.from("notifications").insert({
+        user_id: ticket.user_id,
+        title,
+        message,
+        type: "info",
+      });
+    }
+    setSaving(false);
     toast.success("Ticket updated");
     setReplying(null);
     setReplyText("");
