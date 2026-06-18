@@ -272,7 +272,7 @@ export default function TournamentDetailPage() {
                                   m.winner_id === m.player1_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
                                 )}>
                                   {getPlayerInfo(m.player1_id)?.avatar_url ? (
-                                    <img src={getPlayerInfo(m.player1_id)?.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                                    <img src={getPlayerInfo(m.player1_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
                                   ) : (
                                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
                                       {getPlayerInfo(m.player1_id)?.name?.charAt(0).toUpperCase() ?? "?"}
@@ -304,7 +304,7 @@ export default function TournamentDetailPage() {
                                   m.winner_id === m.player2_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
                                 )}>
                                   {getPlayerInfo(m.player2_id)?.avatar_url ? (
-                                    <img src={getPlayerInfo(m.player2_id)?.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                                    <img src={getPlayerInfo(m.player2_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
                                   ) : (
                                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
                                       {getPlayerInfo(m.player2_id)?.name?.charAt(0).toUpperCase() ?? "?"}
