@@ -58,6 +58,7 @@ export default function VotesPage() {
         .from("polls")
         .select("*")
         .in("status", ["active", "closed"])
+        .eq("hidden", false)
         .order("created_at", { ascending: false });
 
       if (pollsData) setPolls(pollsData);

@@ -55,6 +55,7 @@ export type Poll = {
   starts_at: string;
   ends_at: string;
   status: "draft" | "active" | "closed";
+  hidden: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;

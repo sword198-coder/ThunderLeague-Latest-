@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -167,6 +167,19 @@ export function PollManager() {
     loadPolls();
   };
 
+  const toggleHidden = async (poll: Poll) => {
+    const { error } = await supabase
+      .from("polls")
+      .update({ hidden: !poll.hidden })
+      .eq("id", poll.id);
+    if (error) {
+      toast.error("Failed to update poll visibility");
+      return;
+    }
+    toast.success(poll.hidden ? "Poll is now visible" : "Poll is now hidden");
+    loadPolls();
+  };
+
   const viewVoters = async (poll: Poll) => {
     const { data } = await supabase
       .from("votes")
@@ -306,15 +319,16 @@ export function PollManager() {
                 <TableHead>Title</TableHead>
                 <TableHead>Options</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Visible</TableHead>
                 <TableHead>Start</TableHead>
                 <TableHead>End</TableHead>
-                <TableHead className="w-32">Actions</TableHead>
+                <TableHead className="w-40">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {polls.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No polls yet
                   </TableCell>
                 </TableRow>
@@ -327,6 +341,17 @@ export function PollManager() {
                       <Badge variant="outline" className={statusBadge(p.status)}>
                         {p.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {p.hidden ? (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
+                          Hidden
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                          Visible
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {format(new Date(p.starts_at), "MMM d, HH:mm")}
@@ -341,6 +366,9 @@ export function PollManager() {
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title="Edit">
                           <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => toggleHidden(p)} title={p.hidden ? "Show in Votes" : "Hide from Votes"}>
+                          {p.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} title="Delete">
                           <Trash2 className="h-4 w-4" />
