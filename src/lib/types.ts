@@ -80,6 +80,7 @@ export type Tournament = {
   start_date: string;
   end_date: string;
   max_players: number;
+  system: "1v1" | "4v4";
   status: "upcoming" | "active" | "completed" | "cancelled";
   created_by: string | null;
   created_at: string;
@@ -97,6 +98,23 @@ export type TournamentParticipant = {
   vehicle: string | null;
   accepted_terms: boolean;
   created_at: string;
+};
+
+export type TournamentMatch = {
+  id: string;
+  tournament_id: string;
+  round: number;
+  match_index: number;
+  player1_id: string | null;
+  player2_id: string | null;
+  team1_player_ids: string[];
+  team2_player_ids: string[];
+  scheduled_at: string | null;
+  status: "pending" | "in_progress" | "completed" | "cancelled";
+  winner_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export const WT_NATIONS = [

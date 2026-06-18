@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trophy, Calendar, Swords, Users, Clock, Check, LogIn, Hourglass, X } from "lucide-react";
+import { Loader2, Trophy, Calendar, Swords, Users, Clock, Check, LogIn, Hourglass, X, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -183,7 +183,11 @@ export default function TournamentsPage() {
             </div>
           </div>
 
-          <div className="mt-auto pt-3">
+          <div className="mt-auto pt-3 space-y-2">
+            <Button variant="outline" className="w-full gap-1" onClick={() => router.push(`/tournaments/${t.id}`)}>
+              <ExternalLink className="h-4 w-4" />
+              View Tournament
+            </Button>
             {!user ? (
               <Button className="w-full" onClick={() => router.push("/auth/login")}>
                 <LogIn className="mr-2 h-4 w-4" />

@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users, Check, X } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import type { Tournament } from "@/lib/types";
+import type { Tournament, TournamentMatch } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +45,7 @@ const schema = z.object({
   start_date: z.string().min(1),
   end_date: z.string().min(1),
   max_players: z.number().int().min(1),
+  system: z.enum(["1v1", "4v4"]),
   status: z.enum(["upcoming", "active", "completed", "cancelled"]),
 });
 
@@ -83,6 +84,9 @@ export function TournamentManager() {
     tournamentTitle: string;
     participants: ParticipantInfo[];
   } | null>(null);
+  const [manageTournament, setManageTournament] = useState<Tournament | null>(null);
+  const [matches, setMatches] = useState<TournamentMatch[]>([]);
+  const [approvedPlayers, setApprovedPlayers] = useState<{ id: string; name: string }[]>([]);
   const supabase = createClient();
 
   const {
@@ -93,7 +97,7 @@ export function TournamentManager() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { status: "upcoming", mode: "air", tier: "mid", max_players: 16 },
+    defaultValues: { status: "upcoming", mode: "air", tier: "mid", max_players: 16, system: "1v1" },
   });
 
   const load = async () => {
@@ -108,7 +112,7 @@ export function TournamentManager() {
 
   const startCreate = () => {
     setEditing(null);
-    reset({ status: "upcoming", mode: "air", tier: "mid", max_players: 16, description: "", battle_rating: "" });
+    reset({ status: "upcoming", mode: "air", tier: "mid", max_players: 16, system: "1v1", description: "", battle_rating: "" });
     setShowForm(true);
   };
 
@@ -122,6 +126,7 @@ export function TournamentManager() {
     setValue("start_date", t.start_date.slice(0, 16));
     setValue("end_date", t.end_date.slice(0, 16));
     setValue("max_players", t.max_players);
+    setValue("system", t.system);
     setValue("status", t.status);
     setShowForm(true);
   };
@@ -145,6 +150,7 @@ export function TournamentManager() {
       start_date: new Date(data.start_date).toISOString(),
       end_date: new Date(data.end_date).toISOString(),
       max_players: data.max_players,
+      system: data.system,
       status: data.status,
     };
 
@@ -225,6 +231,73 @@ export function TournamentManager() {
         ),
       };
     });
+  };
+
+  const openManage = async (t: Tournament) => {
+    setManageTournament(t);
+
+    const { data: parts } = await supabase
+      .from("tournament_participants")
+      .select("id, user_id, status, in_game_name")
+      .eq("tournament_id", t.id)
+      .eq("status", "approved");
+
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, username, display_name")
+      .in("id", (parts ?? []).map((p) => p.user_id));
+
+    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const players = (parts ?? []).map((p) => {
+      const prof = profileMap.get(p.user_id);
+      return {
+        id: p.user_id,
+        name: prof?.display_name || prof?.username || p.in_game_name || "Unknown",
+      };
+    });
+    setApprovedPlayers(players);
+
+    const { data: matchData } = await supabase
+      .from("tournament_matches")
+      .select("*")
+      .eq("tournament_id", t.id)
+      .order("round", { ascending: true })
+      .order("match_index", { ascending: true });
+
+    setMatches(matchData ?? []);
+  };
+
+  const addMatch = async () => {
+    if (!manageTournament) return;
+    const round = 1;
+    const matchIndex = matches.filter((m) => m.round === round).length;
+
+    const { error } = await supabase.from("tournament_matches").insert({
+      tournament_id: manageTournament.id,
+      round,
+      match_index: matchIndex,
+    });
+
+    if (error) { toast.error("Failed to add match"); return; }
+    openManage(manageTournament);
+  };
+
+  const updateMatch = async (matchId: string, updates: Partial<TournamentMatch>) => {
+    const { error } = await supabase
+      .from("tournament_matches")
+      .update(updates)
+      .eq("id", matchId);
+
+    if (error) { toast.error("Failed to update match"); return; }
+    toast.success("Match updated");
+    if (manageTournament) openManage(manageTournament);
+  };
+
+  const deleteMatch = async (matchId: string) => {
+    const { error } = await supabase.from("tournament_matches").delete().eq("id", matchId);
+    if (error) { toast.error("Failed to delete match"); return; }
+    toast.success("Match deleted");
+    if (manageTournament) openManage(manageTournament);
   };
 
   const statusBadge = (s: string) => {
@@ -313,11 +386,18 @@ export function TournamentManager() {
                   {errors.end_date && <p className="text-sm text-destructive">{errors.end_date.message}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="max_players">Max Players</Label>
                   <Input id="max_players" type="number" {...register("max_players", { valueAsNumber: true })} min={1} />
                   {errors.max_players && <p className="text-sm text-destructive">{errors.max_players.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="system">System</Label>
+                  <select id="system" {...register("system")} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <option value="1v1">1v1 Knockout</option>
+                    <option value="4v4">4v4 Teams</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
@@ -347,24 +427,30 @@ export function TournamentManager() {
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
+                <TableHead>System</TableHead>
                 <TableHead>Mode</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>BR</TableHead>
                 <TableHead>Applicants</TableHead>
                 <TableHead>Start</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
+                <TableHead className="w-32">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tournaments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">No tournaments yet</TableCell>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">No tournaments yet</TableCell>
                 </TableRow>
               ) : (
                 tournaments.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium max-w-xs truncate">{t.title}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={t.system === "1v1" ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-purple-500/10 text-purple-500 border-purple-500/20"}>
+                        {t.system === "1v1" ? "1v1" : "4v4"}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{MODE_LABELS[t.mode]}</TableCell>
                     <TableCell className="text-xs">{TIER_LABELS[t.tier]}</TableCell>
                     <TableCell>{t.battle_rating}</TableCell>
@@ -382,6 +468,9 @@ export function TournamentManager() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openManage(t)} title="Manage Matches">
+                          <Swords className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => startEdit(t)} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -397,6 +486,172 @@ export function TournamentManager() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!manageTournament} onOpenChange={(o) => { if (!o) setManageTournament(null); }}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Swords className="h-5 w-5" />
+              Manage Matches — {manageTournament?.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Approved Players ({approvedPlayers.length})</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {approvedPlayers.map((p) => (
+                  <Badge key={p.id} variant="outline" className="text-xs">{p.name}</Badge>
+                ))}
+                {approvedPlayers.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No approved players yet</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Matches ({matches.length})</h4>
+              <Button size="sm" variant="outline" onClick={addMatch}>
+                <Plus className="h-3 w-3 mr-1" />
+                Add Match
+              </Button>
+            </div>
+
+            {matches.length > 0 && (
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Round</TableHead>
+                      <TableHead>Match</TableHead>
+                      <TableHead>Player 1 / Team 1</TableHead>
+                      <TableHead>Player 2 / Team 2</TableHead>
+                      <TableHead>Scheduled</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {matches.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell>{m.round}</TableCell>
+                        <TableCell>#{m.match_index + 1}</TableCell>
+                        <TableCell className="text-xs">
+                          {manageTournament?.system === "1v1" ? (
+                            <select
+                              value={m.player1_id ?? ""}
+                              onChange={(e) => updateMatch(m.id, { player1_id: e.target.value || null } as Partial<TournamentMatch>)}
+                              className="w-full text-xs bg-transparent border rounded px-1 py-0.5"
+                            >
+                              <option value="">—</option>
+                              {approvedPlayers.map((p) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="space-y-1">
+                              {m.team1_player_ids.length === 0 ? (
+                                <span className="text-muted-foreground">Empty</span>
+                              ) : (
+                                m.team1_player_ids.map((pid) => {
+                                  const pl = approvedPlayers.find((a) => a.id === pid);
+                                  return <Badge key={pid} variant="outline" className="text-xs block">{pl?.name ?? pid}</Badge>;
+                                })
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 text-xs w-full"
+                                onClick={() => {
+                                  const unassigned = approvedPlayers.filter(
+                                    (a) => !m.team1_player_ids.includes(a.id) && !m.team2_player_ids.includes(a.id)
+                                  );
+                                  if (unassigned.length === 0) { toast.info("No unassigned players"); return; }
+                                  updateMatch(m.id, { team1_player_ids: [...m.team1_player_ids, unassigned[0].id] } as Partial<TournamentMatch>);
+                                }}
+                              >
+                                + Add
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {manageTournament?.system === "1v1" ? (
+                            <select
+                              value={m.player2_id ?? ""}
+                              onChange={(e) => updateMatch(m.id, { player2_id: e.target.value || null } as Partial<TournamentMatch>)}
+                              className="w-full text-xs bg-transparent border rounded px-1 py-0.5"
+                            >
+                              <option value="">—</option>
+                              {approvedPlayers.map((p) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="space-y-1">
+                              {m.team2_player_ids.length === 0 ? (
+                                <span className="text-muted-foreground">Empty</span>
+                              ) : (
+                                m.team2_player_ids.map((pid) => {
+                                  const pl = approvedPlayers.find((a) => a.id === pid);
+                                  return <Badge key={pid} variant="outline" className="text-xs block">{pl?.name ?? pid}</Badge>;
+                                })
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 text-xs w-full"
+                                onClick={() => {
+                                  const unassigned = approvedPlayers.filter(
+                                    (a) => !m.team1_player_ids.includes(a.id) && !m.team2_player_ids.includes(a.id)
+                                  );
+                                  if (unassigned.length === 0) { toast.info("No unassigned players"); return; }
+                                  updateMatch(m.id, { team2_player_ids: [...m.team2_player_ids, unassigned[0].id] } as Partial<TournamentMatch>);
+                                }}
+                              >
+                                + Add
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <input
+                            type="datetime-local"
+                            value={m.scheduled_at ? new Date(m.scheduled_at).toISOString().slice(0, 16) : ""}
+                            onChange={(e) => updateMatch(m.id, { scheduled_at: e.target.value ? new Date(e.target.value).toISOString() : null } as Partial<TournamentMatch>)}
+                            className="w-36 text-xs bg-transparent border rounded px-1 py-0.5"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <select
+                            value={m.status}
+                            onChange={(e) => updateMatch(m.id, { status: e.target.value } as Partial<TournamentMatch>)}
+                            className="text-xs bg-transparent border rounded px-1 py-0.5"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMatch(m.id)} title="Delete">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {matches.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">No matches created yet. Click &ldquo;Add Match&rdquo; to start.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!participantsDialog} onOpenChange={(o) => { if (!o) setParticipantsDialog(null); }}>
         <DialogContent className="max-w-lg">
