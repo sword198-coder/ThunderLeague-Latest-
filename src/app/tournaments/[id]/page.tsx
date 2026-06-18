@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, Flag } from "lucide-react";
+import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass } from "lucide-react";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -23,7 +23,7 @@ export default function TournamentDetailPage() {
   const supabase = createClient();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
-  const [participants, setParticipants] = useState<(TournamentParticipant & { name: string })[]>([]);
+  const [participants, setParticipants] = useState<(TournamentParticipant & { name: string; username: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function TournamentDetailPage() {
 
       const { data: pData } = await supabase
         .from("tournament_participants")
-        .select("*, user_id")
+        .select("*")
         .eq("tournament_id", id);
 
       const { data: profiles } = await supabase
@@ -54,10 +54,14 @@ export default function TournamentDetailPage() {
 
       const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
       setParticipants(
-        (pData ?? []).map((p) => ({
-          ...p,
-          name: profileMap.get(p.user_id)?.display_name || profileMap.get(p.user_id)?.username || "Unknown",
-        }))
+        (pData ?? []).map((p) => {
+          const prof = profileMap.get(p.user_id);
+          return {
+            ...p,
+            name: prof?.display_name || prof?.username || "Unknown",
+            username: prof?.username || "unknown",
+          };
+        })
       );
 
       const { data: mData } = await supabase
@@ -93,7 +97,17 @@ export default function TournamentDetailPage() {
   }
 
   const rounds = [...new Set(matches.map((m) => m.round))].sort();
-  const profileMap = new Map(participants.map((p) => [p.user_id, p.name]));
+  const profileMap = new Map(participants.map((p) => [p.user_id, { name: p.name, username: p.username }]));
+  const approvedCount = participants.filter((p) => p.status === "approved").length;
+
+  const statusIcon = (status: string) => {
+    switch (status) {
+      case "approved": return <CheckCircle2 className="h-3 w-3" />;
+      case "pending": return <Hourglass className="h-3 w-3" />;
+      case "rejected": return <XCircle className="h-3 w-3" />;
+      default: return null;
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
@@ -110,7 +124,6 @@ export default function TournamentDetailPage() {
               <p className="text-muted-foreground mt-2">{tournament.description}</p>
             )}
           </div>
-
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className={cn(
               tournament.status === "active" ? "bg-green-500/10 text-green-500 border-green-500/20" :
@@ -146,7 +159,7 @@ export default function TournamentDetailPage() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="h-4 w-4 shrink-0" />
-              <span className="text-xs">{participants.filter((p) => p.status === "approved").length}/{tournament.max_players} players</span>
+              <span className="text-xs">{approvedCount}/{tournament.max_players} players</span>
             </div>
           </CardContent>
         </Card>
@@ -155,20 +168,44 @@ export default function TournamentDetailPage() {
       {participants.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Participants ({participants.length})</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Participants ({participants.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {participants.map((p) => (
-                <Badge key={p.id} variant="outline" className={cn(
-                  p.status === "approved" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                  p.status === "pending" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" :
-                  "bg-red-500/10 text-red-500 border-red-500/20"
+                <div key={p.id} className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border",
+                  p.status === "approved" ? "border-green-500/20 bg-green-500/5" :
+                  p.status === "pending" ? "border-yellow-500/20 bg-yellow-500/5" :
+                  "border-red-500/20 bg-red-500/5"
                 )}>
-                  <Flag className="h-3 w-3 mr-1" />
-                  {p.name}
-                  <span className="ml-1 opacity-60">({p.status})</span>
-                </Badge>
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
+                    p.status === "approved" ? "bg-green-500/20 text-green-500" :
+                    p.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+                    "bg-red-500/20 text-red-500"
+                  )}>
+                    {p.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{p.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
+                  </div>
+                  <Badge variant="outline" className={cn(
+                    "text-xs shrink-0",
+                    p.status === "approved" ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                    p.status === "pending" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" :
+                    "bg-red-500/10 text-red-500 border-red-500/20"
+                  )}>
+                    <span className="flex items-center gap-1">
+                      {statusIcon(p.status)}
+                      {p.status}
+                    </span>
+                  </Badge>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -185,58 +222,151 @@ export default function TournamentDetailPage() {
           <div className="space-y-8">
             {rounds.map((round) => (
               <div key={round}>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
                   {ROUND_NAMES[round] || `Round ${round}`}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {matches
                     .filter((m) => m.round === round)
                     .map((m) => {
-                      const p1Name = profileMap.get(m.player1_id ?? "") ?? (m.team1_player_ids.length > 0 ? `Team (${m.team1_player_ids.length})` : "TBD");
-                      const p2Name = profileMap.get(m.player2_id ?? "") ?? (m.team2_player_ids.length > 0 ? `Team (${m.team2_player_ids.length})` : "TBD");
+                      const getPlayerInfo = (playerId: string | null) => {
+                        if (!playerId) return null;
+                        return profileMap.get(playerId) ?? null;
+                      };
+
 
                       return (
                         <Card key={m.id} className={cn(
+                          "overflow-hidden",
                           m.status === "completed" && "border-green-500/30",
                           m.status === "in_progress" && "border-amber-500/30",
                         )}>
-                          <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-xs text-muted-foreground">
-                                Match #{m.match_index + 1}
-                              </CardTitle>
-                              <Badge variant="outline" className={cn(
-                                "text-xs",
-                                m.status === "completed" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                                m.status === "in_progress" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                                "bg-muted text-muted-foreground"
-                              )}>
-                                {m.status === "in_progress" ? "In Progress" : m.status}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className={cn("text-sm", m.winner_id === m.player1_id && "font-bold text-green-500")}>
-                                {p1Name}
-                                {m.winner_id === m.player1_id && " 👑"}
-                              </span>
-                              {tournament.system === "1v1" && (
-                                <span className="text-xs text-muted-foreground">VS</span>
-                              )}
-                            </div>
-                            {tournament.system === "1v1" && (
-                              <div className="flex items-center justify-between">
-                                <span className={cn("text-sm", m.winner_id === m.player2_id && "font-bold text-green-500")}>
-                                  {p2Name}
-                                  {m.winner_id === m.player2_id && " 👑"}
-                                </span>
+                          <div className={cn(
+                            "px-4 py-2 flex items-center justify-between border-b",
+                            m.status === "completed" ? "bg-green-500/5" :
+                            m.status === "in_progress" ? "bg-amber-500/5" : "bg-muted/30"
+                          )}>
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              Match #{m.match_index + 1}
+                            </span>
+                            <Badge variant="outline" className={cn(
+                              "text-xs",
+                              m.status === "completed" ? "bg-green-500/10 text-green-500 border-green-500/20" :
+                              m.status === "in_progress" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                              "bg-muted text-muted-foreground"
+                            )}>
+                              {m.status === "in_progress" ? "In Progress" : m.status}
+                            </Badge>
+                          </div>
+
+                          <CardContent className="p-4 space-y-3">
+                            {tournament.system === "1v1" ? (
+                              <>
+                                <div className={cn(
+                                  "flex items-center gap-3 p-3 rounded-lg border",
+                                  m.winner_id === m.player1_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                )}>
+                                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
+                                    {getPlayerInfo(m.player1_id)?.name?.charAt(0).toUpperCase() ?? "?"}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm truncate">
+                                      {getPlayerInfo(m.player1_id)?.name ?? "TBD"}
+                                    </p>
+                                    {getPlayerInfo(m.player1_id) && (
+                                      <p className="text-xs text-muted-foreground truncate">
+                                        @{getPlayerInfo(m.player1_id)?.username}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {m.winner_id === m.player1_id && (
+                                    <Trophy className="h-4 w-4 text-green-500 shrink-0" />
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <div className="h-px flex-1 bg-border" />
+                                  <span className="text-xs font-semibold text-muted-foreground">VS</span>
+                                  <div className="h-px flex-1 bg-border" />
+                                </div>
+
+                                <div className={cn(
+                                  "flex items-center gap-3 p-3 rounded-lg border",
+                                  m.winner_id === m.player2_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                )}>
+                                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
+                                    {getPlayerInfo(m.player2_id)?.name?.charAt(0).toUpperCase() ?? "?"}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm truncate">
+                                      {getPlayerInfo(m.player2_id)?.name ?? "TBD"}
+                                    </p>
+                                    {getPlayerInfo(m.player2_id) && (
+                                      <p className="text-xs text-muted-foreground truncate">
+                                        @{getPlayerInfo(m.player2_id)?.username}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {m.winner_id === m.player2_id && (
+                                    <Trophy className="h-4 w-4 text-green-500 shrink-0" />
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className={cn(
+                                  "p-3 rounded-lg border",
+                                  m.winner_id && m.team1_player_ids.includes(m.winner_id) ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                )}>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-2">Team 1</p>
+                                  <div className="space-y-1.5">
+                                    {m.team1_player_ids.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground">TBD</p>
+                                    ) : (
+                                      m.team1_player_ids.map((pid) => {
+                                        const p = getPlayerInfo(pid);
+                                        return (
+                                          <div key={pid} className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0">
+                                              {p?.name?.charAt(0).toUpperCase() ?? "?"}
+                                            </div>
+                                            <span className="text-xs truncate">{p?.name ?? "Unknown"}</span>
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </div>
+                                <div className={cn(
+                                  "p-3 rounded-lg border",
+                                  m.winner_id && m.team2_player_ids.includes(m.winner_id) ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                )}>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-2">Team 2</p>
+                                  <div className="space-y-1.5">
+                                    {m.team2_player_ids.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground">TBD</p>
+                                    ) : (
+                                      m.team2_player_ids.map((pid) => {
+                                        const p = getPlayerInfo(pid);
+                                        return (
+                                          <div key={pid} className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0">
+                                              {p?.name?.charAt(0).toUpperCase() ?? "?"}
+                                            </div>
+                                            <span className="text-xs truncate">{p?.name ?? "Unknown"}</span>
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             )}
+
                             {m.scheduled_at && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1 border-t">
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-2 border-t">
                                 <Clock className="h-3 w-3" />
-                                {format(new Date(m.scheduled_at), "MMM d, HH:mm")}
+                                {format(new Date(m.scheduled_at), "MMM d, yyyy HH:mm")}
                               </div>
                             )}
                           </CardContent>

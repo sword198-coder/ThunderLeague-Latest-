@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -87,6 +87,10 @@ export function TournamentManager() {
   const [manageTournament, setManageTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<{ id: string; name: string }[]>([]);
+  const [newMatchP1, setNewMatchP1] = useState("");
+  const [newMatchP2, setNewMatchP2] = useState("");
+  const [newMatchT1, setNewMatchT1] = useState<string[]>([]);
+  const [newMatchT2, setNewMatchT2] = useState<string[]>([]);
   const supabase = createClient();
 
   const {
@@ -267,18 +271,62 @@ export function TournamentManager() {
     setMatches(matchData ?? []);
   };
 
-  const addMatch = async () => {
+  const notifyMatchPlayers = async (match: TournamentMatch) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const playerIds: string[] = [];
+    if (match.player1_id) playerIds.push(match.player1_id);
+    if (match.player2_id) playerIds.push(match.player2_id);
+    playerIds.push(...match.team1_player_ids, ...match.team2_player_ids);
+
+    if (playerIds.length === 0) { toast.info("No players assigned to this match"); return; }
+
+    const notifications = playerIds.map((pid) => ({
+      user_id: pid,
+      title: `Match Notification - ${manageTournament?.title}`,
+      message: `You have a match scheduled. Check the tournament page for details.`,
+      type: "tournament",
+      link: `/tournaments/${manageTournament?.id}`,
+      created_by: user.id,
+    }));
+
+    const { error } = await supabase.from("notifications").insert(notifications);
+    if (error) { toast.error("Failed to send notifications"); return; }
+    toast.success(`Notification sent to ${notifications.length} player(s)`);
+  };
+
+  const createMatch = async () => {
     if (!manageTournament) return;
     const round = 1;
     const matchIndex = matches.filter((m) => m.round === round).length;
 
-    const { error } = await supabase.from("tournament_matches").insert({
+    if (manageTournament.system === "1v1") {
+      if (!newMatchP1 || !newMatchP2) { toast.error("Select both players"); return; }
+      if (newMatchP1 === newMatchP2) { toast.error("Players must be different"); return; }
+    }
+
+    const payload: Record<string, unknown> = {
       tournament_id: manageTournament.id,
       round,
       match_index: matchIndex,
-    });
+    };
 
-    if (error) { toast.error("Failed to add match"); return; }
+    if (manageTournament.system === "1v1") {
+      payload.player1_id = newMatchP1;
+      payload.player2_id = newMatchP2;
+    } else {
+      payload.team1_player_ids = newMatchT1;
+      payload.team2_player_ids = newMatchT2;
+    }
+
+    const { error } = await supabase.from("tournament_matches").insert(payload);
+    if (error) { toast.error("Failed to create match"); return; }
+    toast.success("Match created");
+    setNewMatchP1("");
+    setNewMatchP2("");
+    setNewMatchT1([]);
+    setNewMatchT2([]);
     openManage(manageTournament);
   };
 
@@ -488,7 +536,7 @@ export function TournamentManager() {
       </Card>
 
       <Dialog open={!!manageTournament} onOpenChange={(o) => { if (!o) setManageTournament(null); }}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Swords className="h-5 w-5" />
@@ -496,7 +544,7 @@ export function TournamentManager() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <h4 className="text-sm font-semibold mb-2">Approved Players ({approvedPlayers.length})</h4>
               <div className="flex flex-wrap gap-1.5">
@@ -509,146 +557,215 @@ export function TournamentManager() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">Matches ({matches.length})</h4>
-              <Button size="sm" variant="outline" onClick={addMatch}>
+            <div className="border rounded-lg p-4 bg-muted/20 space-y-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Create New Match
+              </h4>
+
+              {manageTournament?.system === "1v1" ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Player 1</Label>
+                    <select
+                      value={newMatchP1}
+                      onChange={(e) => setNewMatchP1(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    >
+                      <option value="">Select player...</option>
+                      {approvedPlayers.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Player 2</Label>
+                    <select
+                      value={newMatchP2}
+                      onChange={(e) => setNewMatchP2(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    >
+                      <option value="">Select player...</option>
+                      {approvedPlayers.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Team 1 Players</Label>
+                    <div className="border rounded-md p-2 min-h-[60px] space-y-1">
+                      {newMatchT1.length === 0 && <p className="text-xs text-muted-foreground">Click players below to add</p>}
+                      {newMatchT1.map((pid) => {
+                        const pl = approvedPlayers.find((a) => a.id === pid);
+                        return (
+                          <Badge key={pid} variant="outline" className="text-xs cursor-pointer"
+                            onClick={() => setNewMatchT1(newMatchT1.filter((id) => id !== pid))}
+                          >
+                            {pl?.name ?? pid} ✕
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Team 2 Players</Label>
+                    <div className="border rounded-md p-2 min-h-[60px] space-y-1">
+                      {newMatchT2.length === 0 && <p className="text-xs text-muted-foreground">Click players below to add</p>}
+                      {newMatchT2.map((pid) => {
+                        const pl = approvedPlayers.find((a) => a.id === pid);
+                        return (
+                          <Badge key={pid} variant="outline" className="text-xs cursor-pointer"
+                            onClick={() => setNewMatchT2(newMatchT2.filter((id) => id !== pid))}
+                          >
+                            {pl?.name ?? pid} ✕
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground mb-1.5">Available players (click to assign):</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {approvedPlayers.filter((p) => !newMatchT1.includes(p.id) && !newMatchT2.includes(p.id)).map((p) => (
+                        <Badge key={p.id} variant="outline" className="text-xs cursor-pointer hover:bg-primary/10"
+                          onClick={() => {
+                            if (newMatchT1.length <= newMatchT2.length) {
+                              setNewMatchT1([...newMatchT1, p.id]);
+                            } else {
+                              setNewMatchT2([...newMatchT2, p.id]);
+                            }
+                          }}
+                        >
+                          {p.name} +
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Button size="sm" onClick={createMatch} disabled={
+                manageTournament.system === "1v1" ? (!newMatchP1 || !newMatchP2) : (newMatchT1.length === 0 || newMatchT2.length === 0)
+              }>
                 <Plus className="h-3 w-3 mr-1" />
-                Add Match
+                Create Match
               </Button>
             </div>
 
-            {matches.length > 0 && (
-              <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Round</TableHead>
-                      <TableHead>Match</TableHead>
-                      <TableHead>Player 1 / Team 1</TableHead>
-                      <TableHead>Player 2 / Team 2</TableHead>
-                      <TableHead>Scheduled</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-20">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {matches.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell>{m.round}</TableCell>
-                        <TableCell>#{m.match_index + 1}</TableCell>
-                        <TableCell className="text-xs">
-                          {manageTournament?.system === "1v1" ? (
-                            <select
-                              value={m.player1_id ?? ""}
-                              onChange={(e) => updateMatch(m.id, { player1_id: e.target.value || null } as Partial<TournamentMatch>)}
-                              className="w-full text-xs bg-transparent border rounded px-1 py-0.5"
-                            >
-                              <option value="">—</option>
-                              {approvedPlayers.map((p) => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="space-y-1">
-                              {m.team1_player_ids.length === 0 ? (
-                                <span className="text-muted-foreground">Empty</span>
-                              ) : (
-                                m.team1_player_ids.map((pid) => {
-                                  const pl = approvedPlayers.find((a) => a.id === pid);
-                                  return <Badge key={pid} variant="outline" className="text-xs block">{pl?.name ?? pid}</Badge>;
-                                })
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-5 text-xs w-full"
-                                onClick={() => {
-                                  const unassigned = approvedPlayers.filter(
-                                    (a) => !m.team1_player_ids.includes(a.id) && !m.team2_player_ids.includes(a.id)
-                                  );
-                                  if (unassigned.length === 0) { toast.info("No unassigned players"); return; }
-                                  updateMatch(m.id, { team1_player_ids: [...m.team1_player_ids, unassigned[0].id] } as Partial<TournamentMatch>);
-                                }}
-                              >
-                                + Add
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {manageTournament?.system === "1v1" ? (
-                            <select
-                              value={m.player2_id ?? ""}
-                              onChange={(e) => updateMatch(m.id, { player2_id: e.target.value || null } as Partial<TournamentMatch>)}
-                              className="w-full text-xs bg-transparent border rounded px-1 py-0.5"
-                            >
-                              <option value="">—</option>
-                              {approvedPlayers.map((p) => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="space-y-1">
-                              {m.team2_player_ids.length === 0 ? (
-                                <span className="text-muted-foreground">Empty</span>
-                              ) : (
-                                m.team2_player_ids.map((pid) => {
-                                  const pl = approvedPlayers.find((a) => a.id === pid);
-                                  return <Badge key={pid} variant="outline" className="text-xs block">{pl?.name ?? pid}</Badge>;
-                                })
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-5 text-xs w-full"
-                                onClick={() => {
-                                  const unassigned = approvedPlayers.filter(
-                                    (a) => !m.team1_player_ids.includes(a.id) && !m.team2_player_ids.includes(a.id)
-                                  );
-                                  if (unassigned.length === 0) { toast.info("No unassigned players"); return; }
-                                  updateMatch(m.id, { team2_player_ids: [...m.team2_player_ids, unassigned[0].id] } as Partial<TournamentMatch>);
-                                }}
-                              >
-                                + Add
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <input
-                            type="datetime-local"
-                            value={m.scheduled_at ? new Date(m.scheduled_at).toISOString().slice(0, 16) : ""}
-                            onChange={(e) => updateMatch(m.id, { scheduled_at: e.target.value ? new Date(e.target.value).toISOString() : null } as Partial<TournamentMatch>)}
-                            className="w-36 text-xs bg-transparent border rounded px-1 py-0.5"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <select
-                            value={m.status}
-                            onChange={(e) => updateMatch(m.id, { status: e.target.value } as Partial<TournamentMatch>)}
-                            className="text-xs bg-transparent border rounded px-1 py-0.5"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMatch(m.id)} title="Delete">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Existing Matches ({matches.length})</h4>
 
-            {matches.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">No matches created yet. Click &ldquo;Add Match&rdquo; to start.</p>
-            )}
+              {matches.length > 0 ? (
+                <div className="space-y-3">
+                  {matches.map((m) => (
+                    <Card key={m.id}>
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-6 gap-4 items-center">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Round</p>
+                            <p className="text-sm font-medium">R{m.round} #{m.match_index + 1}</p>
+                          </div>
+
+                          {manageTournament?.system === "1v1" ? (
+                            <>
+                              <div className="col-span-2">
+                                <p className="text-xs text-muted-foreground mb-1">Player 1</p>
+                                <select
+                                  value={m.player1_id ?? ""}
+                                  onChange={(e) => updateMatch(m.id, { player1_id: e.target.value || null } as Partial<TournamentMatch>)}
+                                  className="w-full text-xs bg-transparent border rounded px-2 py-1"
+                                >
+                                  <option value="">—</option>
+                                  {approvedPlayers.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-xs text-muted-foreground mb-1">Player 2</p>
+                                <select
+                                  value={m.player2_id ?? ""}
+                                  onChange={(e) => updateMatch(m.id, { player2_id: e.target.value || null } as Partial<TournamentMatch>)}
+                                  className="w-full text-xs bg-transparent border rounded px-2 py-1"
+                                >
+                                  <option value="">—</option>
+                                  {approvedPlayers.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="col-span-2">
+                                <p className="text-xs text-muted-foreground mb-1">Team 1 ({m.team1_player_ids.length})</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {m.team1_player_ids.map((pid) => {
+                                    const pl = approvedPlayers.find((a) => a.id === pid);
+                                    return <Badge key={pid} variant="outline" className="text-xs">{pl?.name ?? pid}</Badge>;
+                                  })}
+                                  {m.team1_player_ids.length === 0 && <span className="text-xs text-muted-foreground">Empty</span>}
+                                </div>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-xs text-muted-foreground mb-1">Team 2 ({m.team2_player_ids.length})</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {m.team2_player_ids.map((pid) => {
+                                    const pl = approvedPlayers.find((a) => a.id === pid);
+                                    return <Badge key={pid} variant="outline" className="text-xs">{pl?.name ?? pid}</Badge>;
+                                  })}
+                                  {m.team2_player_ids.length === 0 && <span className="text-xs text-muted-foreground">Empty</span>}
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Schedule</p>
+                            <input
+                              type="datetime-local"
+                              value={m.scheduled_at ? new Date(m.scheduled_at).toISOString().slice(0, 16) : ""}
+                              onChange={(e) => updateMatch(m.id, { scheduled_at: e.target.value ? new Date(e.target.value).toISOString() : null } as Partial<TournamentMatch>)}
+                              className="w-full text-xs bg-transparent border rounded px-1 py-1"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Status</p>
+                            <select
+                              value={m.status}
+                              onChange={(e) => updateMatch(m.id, { status: e.target.value } as Partial<TournamentMatch>)}
+                              className="w-full text-xs bg-transparent border rounded px-1 py-1"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-1 mt-3 pt-2 border-t">
+                          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => notifyMatchPlayers(m)}>
+                            <Bell className="h-3 w-3" />
+                            Notify
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive gap-1" onClick={() => deleteMatch(m.id)}>
+                            <Trash2 className="h-3 w-3" />
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6 border rounded-lg">
+                  No matches yet. Use the form above to create one.
+                </p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
