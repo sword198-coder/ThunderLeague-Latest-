@@ -54,8 +54,8 @@ export default async function LeaderboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 relative">
-      <div className="fixed inset-0 -z-10 opacity-[0.07] pointer-events-none"
+    <div className="relative min-h-screen">
+      <div className="fixed inset-0 opacity-15 pointer-events-none"
         style={{
           backgroundImage: "url(/leaderbackground.png)",
           backgroundSize: "cover",
@@ -63,6 +63,7 @@ export default async function LeaderboardPage() {
           backgroundRepeat: "no-repeat",
         }}
       />
+      <div className="container mx-auto px-4 py-8 relative z-10">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
         <p className="text-muted-foreground">Top Tournaments players</p>
@@ -118,6 +119,7 @@ export default async function LeaderboardPage() {
           </TableBody>
         </Table>
       </div>
+    </div>
     </div>
   );
 }
