@@ -86,6 +86,11 @@ export function PollManager() {
 
   useEffect(() => {
     loadPolls();
+    const channel = supabase
+      .channel("admin-polls")
+      .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, () => { loadPolls(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const startCreate = () => {

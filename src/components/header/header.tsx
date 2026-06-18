@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { AuthButtons } from "./auth-buttons";
 import { UserMenu } from "./user-menu";
@@ -10,13 +11,17 @@ import { NavTabs } from "./nav-tabs";
 
 export function Header() {
   const { user, profile, loading } = useAuth();
+  const pathname = usePathname();
   const isAdmin = profile?.role === "super_admin";
+  const isAuthPage = pathname === "/auth/login" || pathname === "/auth/signup";
 
   const content = loading ? (
     <div className="flex items-center gap-2">
       <div className="h-8 w-20 bg-muted rounded animate-pulse" />
       <div className="h-8 w-20 bg-muted rounded animate-pulse" />
     </div>
+  ) : isAuthPage ? (
+    <AuthButtons />
   ) : user ? (
     <>
       <NavTabs />

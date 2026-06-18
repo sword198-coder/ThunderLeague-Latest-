@@ -64,6 +64,11 @@ export function NotificationComposer() {
 
   useEffect(() => {
     loadHistory();
+    const channel = supabase
+      .channel("admin-notifications-history")
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => { loadHistory(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const startEdit = (n: Notification) => {

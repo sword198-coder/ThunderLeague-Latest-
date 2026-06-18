@@ -52,7 +52,14 @@ export function LeaderboardManager() {
     if (data) setEntries(data);
   }, [supabase]);
 
-  useEffect(() => { fetchEntries(); }, [fetchEntries]);
+  useEffect(() => {
+    fetchEntries();
+    const channel = supabase
+      .channel("admin-leaderboard")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leaderboard_entries" }, () => { fetchEntries(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchEntries]);
 
   const resetForm = () => {
     setForm(emptyForm);

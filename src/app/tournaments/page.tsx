@@ -78,6 +78,13 @@ export default function TournamentsPage() {
     };
 
     load();
+
+    const channel = supabase
+      .channel("tournaments-list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tournaments" }, () => { load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "tournament_participants" }, () => { load(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleSubmitApplication = async (tournamentId: string, data: {

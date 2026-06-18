@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Loader2, Flag, Camera } from "lucide-react";
+import { Upload, Loader2, Flag, Camera, Globe, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { COUNTRIES } from "@/lib/types";
 
 const WT_NATIONS = [
   { code: "us", label: "USA" },
@@ -49,12 +51,16 @@ export default function AccountPage() {
   const [squadron, setSquadron] = useState("");
   const [countries, setCountries] = useState<string[]>([]);
   const [tiers, setTiers] = useState<string[]>([]);
+  const [nationality, setNationality] = useState("");
+  const [discordUsername, setDiscordUsername] = useState("");
   const [playMode, setPlayMode] = useState("both");
 
   useEffect(() => {
     if (profile) {
       setWtUsername(profile.war_thunder_username ?? "");
       setSquadron(profile.squadron_name ?? "");
+      setNationality(profile.nationality ?? "");
+      setDiscordUsername(profile.discord_username ?? "");
       setCountries(profile.play_countries ?? []);
       setTiers(profile.play_tiers ?? []);
       setPlayMode(profile.play_mode ?? "both");
@@ -130,6 +136,8 @@ export default function AccountPage() {
       .update({
         war_thunder_username: wtUsername || null,
         squadron_name: squadron || null,
+        nationality: nationality || null,
+        discord_username: discordUsername || null,
         play_countries: countries,
         play_tiers: tiers,
         play_mode: playMode,
@@ -206,6 +214,37 @@ export default function AccountPage() {
           <div>
             <Label>Display Name</Label>
             <p className="text-sm font-medium mt-1">{profile?.display_name || "\u2014"}</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nationality" className="flex items-center gap-1.5">
+              <Globe className="h-4 w-4" />
+              Nationality
+            </Label>
+            <Select value={nationality} onValueChange={(v) => setNationality(v ?? "")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select your country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="discord" className="flex items-center gap-1.5">
+              <MessageCircle className="h-4 w-4" />
+              Discord Username
+            </Label>
+            <Input
+              id="discord"
+              value={discordUsername}
+              onChange={(e) => setDiscordUsername(e.target.value)}
+              placeholder="e.g. user#1234"
+            />
           </div>
         </CardContent>
       </Card>

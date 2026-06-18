@@ -42,14 +42,21 @@ export function AccountsTable() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data) setAccounts(data);
-        setLoading(false);
-      });
+    const load = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (data) setAccounts(data);
+      setLoading(false);
+    };
+    load();
+
+    const channel = supabase
+      .channel("admin-accounts")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { load(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const openNotify = (profile: Profile) => {
@@ -108,6 +115,8 @@ export function AccountsTable() {
                 <TableHead>Email</TableHead>
                 <TableHead>Display Name</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Discord</TableHead>
+                <TableHead>Nationality</TableHead>
                 <TableHead>WT Username</TableHead>
                 <TableHead>Squadron</TableHead>
                 <TableHead>Joined</TableHead>
@@ -132,6 +141,8 @@ export function AccountsTable() {
                       {a.role === "super_admin" ? "Admin" : "User"}
                     </Badge>
                   </TableCell>
+                  <TableCell>{a.discord_username || "\u2014"}</TableCell>
+                  <TableCell>{a.nationality || "\u2014"}</TableCell>
                   <TableCell>{a.war_thunder_username || "\u2014"}</TableCell>
                   <TableCell>{a.squadron_name || "\u2014"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">

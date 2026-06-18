@@ -78,6 +78,12 @@ export default function VotesPage() {
     };
 
     loadData();
+
+    const channel = supabase
+      .channel("votes-polls")
+      .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, () => { loadData(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const selectOption = (pollId: string, option: string) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Trophy, BarChart3, Vote } from "lucide-react";
+import { Trophy, BarChart3, Vote, MessageSquareText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function NavTabs() {
@@ -12,6 +12,7 @@ export function NavTabs() {
     { label: "Tournaments", icon: Trophy, href: "/tournaments" },
     { label: "Leaderboard", icon: BarChart3, href: "/leaderboard" },
     { label: "Votes", icon: Vote, href: "/votes" },
+    { label: "Support", icon: MessageSquareText, href: "/support" },
   ];
 
   return (

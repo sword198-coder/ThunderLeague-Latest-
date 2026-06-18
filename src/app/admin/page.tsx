@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { MessageSquareText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,24 @@ export default function AdminDashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               Create, edit, or close polls for user voting.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/support">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquareText className="h-5 w-5" />
+              Support
+            </CardTitle>
+            <CardDescription>
+              Manage user support tickets
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              View, reply, and resolve tickets from users.
             </p>
           </CardContent>
         </Card>

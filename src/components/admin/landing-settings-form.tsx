@@ -42,22 +42,29 @@ export function LandingSettingsForm() {
   });
 
   useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("key, value")
-      .then(({ data }) => {
-        if (data) {
-          const map: Record<string, string> = {};
-          data.forEach((s) => (map[s.key] = s.value));
-          reset({
-            news_text: map.news_text || "",
-            youtube_url: map.youtube_url || "",
-            discord_url: map.discord_url || "",
-            tiktok_url: map.tiktok_url || "",
-          });
-        }
-        setLoading(false);
-      });
+    const load = async () => {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("key, value");
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((s) => (map[s.key] = s.value));
+        reset({
+          news_text: map.news_text || "",
+          youtube_url: map.youtube_url || "",
+          discord_url: map.discord_url || "",
+          tiktok_url: map.tiktok_url || "",
+        });
+      }
+      setLoading(false);
+    };
+    load();
+
+    const channel = supabase
+      .channel("admin-landing-settings")
+      .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, () => { load(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const onSubmit = async (data: FormData) => {
