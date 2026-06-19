@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users } from "lucide-react";
+import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users, Image, Film } from "lucide-react";
 import type { Profile, CardBackground } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,12 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data:
     : data.player_name.slice(0, 2).toUpperCase();
 
   const bg = cardBackground;
-  const gradStyle = bg
+  const bgType = bg?.type || "gradient";
+
+  const gradStyle = bg && bgType === "gradient"
     ? { backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})` }
+    : bg && (bgType === "image" || bgType === "video")
+    ? { backgroundImage: `url(${bg.file_url})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { backgroundImage: "linear-gradient(135deg, #92400e, #d97706, #fbbf24)" };
 
   const handleShare = async () => {
@@ -44,7 +48,14 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm p-0 overflow-hidden rounded-2xl">
         <div className="relative">
-          <div className="h-28" style={gradStyle} />
+          <div className="h-28 relative overflow-hidden" style={bgType === "gradient" ? gradStyle : {}}>
+            {bgType === "image" && (
+              <img src={bg!.file_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            )}
+            {bgType === "video" && (
+              <video src={bg!.file_url} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
+            )}
+          </div>
           <Button
             variant="ghost"
             size="icon"

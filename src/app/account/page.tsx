@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Flag, Camera, Globe, MessageCircle, Zap, Copy, Check, Link, ShoppingBag, Eye, Sparkles } from "lucide-react";
+import { Loader2, Flag, Camera, Globe, MessageCircle, Zap, Copy, Check, Link, ShoppingBag, Eye, Sparkles, Image, Film, Palette } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -487,14 +487,20 @@ export default function AccountPage() {
                       isSelected ? "border-primary ring-2 ring-primary/30" : "border-border"
                     }`}
                   >
-                    <div
-                      className="h-16"
-                      style={{
-                        backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})`,
-                      }}
-                    />
+                    <div className="h-16 bg-muted relative overflow-hidden">
+                      {bg.type === "video" ? (
+                        <video src={bg.file_url} className="w-full h-full object-cover" muted autoPlay loop playsInline />
+                      ) : bg.type === "image" ? (
+                        <img src={bg.file_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full" style={{ backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})` }} />
+                      )}
+                    </div>
                     <div className="p-2 space-y-1">
-                      <p className="text-xs font-semibold truncate">{bg.name}</p>
+                      <p className="text-xs font-semibold truncate flex items-center gap-1">
+                        {bg.type === "gradient" ? <Palette className="h-3 w-3" /> : bg.type === "image" ? <Image className="h-3 w-3" /> : <Film className="h-3 w-3" />}
+                        {bg.name}
+                      </p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Zap className="h-3 w-3 text-amber-500" />
                         {bg.price}

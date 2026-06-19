@@ -24,9 +24,11 @@ export type Profile = {
 export type CardBackground = {
   id: string;
   name: string;
+  type: "gradient" | "image" | "video";
   gradient_from: string;
   gradient_via: string;
   gradient_to: string;
+  file_url: string;
   price: number;
   created_at: string;
 };

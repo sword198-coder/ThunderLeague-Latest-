@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MessageSquareText, Zap, Link as LinkIcon } from "lucide-react";
+import { MessageSquareText, Zap, Link as LinkIcon, Palette } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +147,24 @@ export default function AdminDashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               Track referrals and verify signups.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/card-backgrounds">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Card Backgrounds
+            </CardTitle>
+            <CardDescription>
+              Upload images/videos, set prices, manage backgrounds
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Create gradient, image, or video backgrounds for player cards.
             </p>
           </CardContent>
         </Card>
