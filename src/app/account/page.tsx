@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Loader2, Flag, Camera, Globe, MessageCircle, Zap, Copy, Check, Link } from "lucide-react";
+import { Loader2, Flag, Camera, Globe, MessageCircle, Zap, Copy, Check, Link, ShoppingBag, Eye, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { COUNTRIES } from "@/lib/types";
+import { PlayerCard } from "@/components/leaderboard/player-card";
+import { COUNTRIES, type CardBackground } from "@/lib/types";
 
 const WT_NATIONS = [
   { code: "us", label: "USA" },
@@ -24,7 +25,6 @@ const WT_NATIONS = [
   { code: "it", label: "Italy" },
   { code: "fr", label: "France" },
   { code: "se", label: "Sweden" },
-  
 ];
 
 const TIERS = [
@@ -57,6 +57,11 @@ export default function AccountPage() {
   const [referralLink, setReferralLink] = useState("");
   const [referralLoading, setReferralLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [backgrounds, setBackgrounds] = useState<CardBackground[]>([]);
+  const [ownedBgIds, setOwnedBgIds] = useState<string[]>([]);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [selectedBgId, setSelectedBgId] = useState<string | null>(null);
+  const [showCardPreview, setShowCardPreview] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -67,6 +72,7 @@ export default function AccountPage() {
       setCountries(profile.play_countries ?? []);
       setTiers(profile.play_tiers ?? []);
       setPlayMode(profile.play_mode ?? "both");
+      setSelectedBgId(profile.selected_card_background_id);
     }
   }, [profile]);
 
@@ -74,6 +80,17 @@ export default function AccountPage() {
     if (user) {
       supabase.from("referral_links").select("code").eq("user_id", user.id).maybeSingle().then(({ data }) => {
         if (data) setReferralLink(`${window.location.origin}/auth/signup?ref=${data.code}`);
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    supabase.from("card_backgrounds").select("*").then(({ data }) => {
+      if (data) setBackgrounds(data as CardBackground[]);
+    });
+    if (user) {
+      supabase.from("user_card_backgrounds").select("background_id").eq("user_id", user.id).then(({ data }) => {
+        if (data) setOwnedBgIds(data.map((r: { background_id: string }) => r.background_id));
       });
     }
   }, [user]);
@@ -93,6 +110,43 @@ export default function AccountPage() {
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const buyBackground = async (bg: CardBackground) => {
+    if (!user || !profile) return;
+    if ((profile.thunder_points ?? 0) < bg.price) {
+      toast.error("Not enough Thunder Points!");
+      return;
+    }
+    setBuyingId(bg.id);
+    const newPoints = (profile.thunder_points ?? 0) - bg.price;
+    const { error: tpError } = await supabase.from("profiles").update({ thunder_points: newPoints }).eq("id", user.id);
+    if (tpError) { toast.error("Purchase failed"); setBuyingId(null); return; }
+    const { error: logError } = await supabase.from("thunder_points_log").insert({
+      user_id: user.id,
+      amount: -bg.price,
+      reason: `Purchased card background: ${bg.name}`,
+      created_by: user.id,
+    });
+    if (logError) { toast.error("Purchase failed"); setBuyingId(null); return; }
+    const { error: buyError } = await supabase.from("user_card_backgrounds").insert({
+      user_id: user.id,
+      background_id: bg.id,
+    });
+    if (buyError) { toast.error("Purchase failed"); setBuyingId(null); return; }
+    setOwnedBgIds((prev) => [...prev, bg.id]);
+    await refresh();
+    toast.success(`Purchased "${bg.name}" background!`);
+    setBuyingId(null);
+  };
+
+  const selectBackground = async (bgId: string) => {
+    if (!user) return;
+    setSelectedBgId(bgId);
+    const { error } = await supabase.from("profiles").update({ selected_card_background_id: bgId }).eq("id", user.id);
+    if (error) { toast.error("Failed to select background"); return; }
+    await refresh();
+    toast.success("Background selected!");
   };
 
   if (loading) {
@@ -181,6 +235,8 @@ export default function AccountPage() {
     setSaving(false);
   };
 
+  const selectedBackground = backgrounds.find((b) => b.id === selectedBgId);
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
       <h1 className="text-3xl font-bold">My Account</h1>
@@ -225,6 +281,29 @@ export default function AccountPage() {
               onChange={handleAvatarUpload}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+            Player Card
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowCardPreview(true)}>
+            <Sparkles className="h-4 w-4 mr-1" />
+            Preview
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Your card appears when someone clicks your name on the leaderboard.
+            {selectedBackground && (
+              <span className="block mt-1">
+                Current background: <strong>{selectedBackground.name}</strong>
+              </span>
+            )}
+          </p>
         </CardContent>
       </Card>
 
@@ -389,6 +468,78 @@ export default function AccountPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5" />
+            Card Backgrounds
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {backgrounds.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Loading backgrounds...</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {backgrounds.map((bg) => {
+                const owned = ownedBgIds.includes(bg.id);
+                const isSelected = selectedBgId === bg.id;
+                return (
+                  <div
+                    key={bg.id}
+                    className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                      isSelected ? "border-primary ring-2 ring-primary/30" : "border-border"
+                    }`}
+                  >
+                    <div
+                      className="h-16"
+                      style={{
+                        backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})`,
+                      }}
+                    />
+                    <div className="p-2 space-y-1">
+                      <p className="text-xs font-semibold truncate">{bg.name}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        {bg.price}
+                      </p>
+                      {owned ? (
+                        <Button
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          className="w-full h-7 text-xs"
+                          onClick={() => selectBackground(bg.id)}
+                        >
+                          {isSelected ? "Selected" : "Equip"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full h-7 text-xs"
+                          disabled={(profile?.thunder_points ?? 0) < bg.price || buyingId === bg.id}
+                          onClick={() => buyBackground(bg)}
+                        >
+                          {buyingId === bg.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            "Buy"
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    {!owned && (profile?.thunder_points ?? 0) < bg.price && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="text-xs text-white font-medium">Too expensive</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Link className="h-5 w-5" />
             Referral Link
           </CardTitle>
@@ -412,6 +563,13 @@ export default function AccountPage() {
           )}
         </CardContent>
       </Card>
+
+      <PlayerCard
+        data={profile ? { player_name: profile.display_name || profile.username, wins: 0, losses: 0, score: 0, profile } : null}
+        open={showCardPreview}
+        onOpenChange={setShowCardPreview}
+        cardBackground={selectedBackground}
+      />
     </div>
   );
 }

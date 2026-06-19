@@ -14,10 +14,28 @@ export type Profile = {
   discord_username: string | null;
   thunder_points: number;
   last_active_at: string | null;
+  selected_card_background_id: string | null;
   play_countries: string[] | null;
   play_tiers: string[] | null;
   play_mode: "air" | "ground" | "both" | null;
   created_at: string;
+};
+
+export type CardBackground = {
+  id: string;
+  name: string;
+  gradient_from: string;
+  gradient_via: string;
+  gradient_to: string;
+  price: number;
+  created_at: string;
+};
+
+export type UserCardBackground = {
+  id: string;
+  user_id: string;
+  background_id: string;
+  purchased_at: string;
 };
 
 export type LeaderboardEntry = {

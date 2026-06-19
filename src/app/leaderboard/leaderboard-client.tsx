@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Trophy, Swords, BarChart3, Zap } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { Trophy, Swords, BarChart3 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PlayerCard } from "@/components/leaderboard/player-card";
-import type { LeaderboardEntry, Profile } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import type { LeaderboardEntry, Profile, CardBackground } from "@/lib/types";
 
 const TIERS = [
   { key: "high", label: "HIGH" },
@@ -32,6 +33,20 @@ export function LeaderboardClient({
     data: LeaderboardEntry;
     profile: Profile | null;
   } | null>(null);
+  const [backgrounds, setBackgrounds] = useState<CardBackground[]>([]);
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.from("card_backgrounds").select("*").then(({ data }) => {
+      if (data) setBackgrounds(data as CardBackground[]);
+    });
+  }, []);
+
+  const bgMap = useMemo(() => {
+    const map = new Map<string, CardBackground>();
+    for (const bg of backgrounds) map.set(bg.id, bg);
+    return map;
+  }, [backgrounds]);
 
   const profileMap = useMemo(() => {
     const map = new Map<string, Profile>();
@@ -147,6 +162,7 @@ export function LeaderboardClient({
         data={selectedPlayer ? { player_name: selectedPlayer.data.player_name, wins: selectedPlayer.data.wins, losses: selectedPlayer.data.losses, score: selectedPlayer.data.score, profile: selectedPlayer.profile } : null}
         open={!!selectedPlayer}
         onOpenChange={(v) => { if (!v) setSelectedPlayer(null); }}
+        cardBackground={selectedPlayer?.profile?.selected_card_background_id ? bgMap.get(selectedPlayer.profile.selected_card_background_id) : null}
       />
     </>
   );
