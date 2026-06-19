@@ -126,13 +126,15 @@ export default function AccountPage() {
     const newPoints = (profile.thunder_points ?? 0) - bg.price;
     const { error: tpError } = await supabase.from("profiles").update({ thunder_points: newPoints }).eq("id", user.id);
     if (tpError) { toast.error("Purchase failed"); setBuyingId(null); return; }
-    const { error: logError } = await supabase.from("thunder_points_log").insert({
-      user_id: user.id,
-      amount: -bg.price,
-      reason: `Purchased card background: ${bg.name}`,
-      created_by: user.id,
-    });
-    if (logError) { toast.error("Purchase failed"); setBuyingId(null); return; }
+    if (bg.price > 0) {
+      const { error: logError } = await supabase.from("thunder_points_log").insert({
+        user_id: user.id,
+        amount: -bg.price,
+        reason: `Purchased card background: ${bg.name}`,
+        created_by: user.id,
+      });
+      if (logError) { toast.error("Purchase failed"); setBuyingId(null); return; }
+    }
     const { error: buyError } = await supabase.from("user_card_backgrounds").insert({
       user_id: user.id,
       background_id: bg.id,
