@@ -15,6 +15,7 @@ export type Profile = {
   thunder_points: number;
   last_active_at: string | null;
   selected_card_background_id: string | null;
+  selected_title_id: string | null;
   play_countries: string[] | null;
   play_tiers: string[] | null;
   play_mode: "air" | "ground" | "both" | null;
@@ -31,6 +32,25 @@ export type CardBackground = {
   file_url: string;
   price: number;
   created_at: string;
+};
+
+export type CardTitle = {
+  id: string;
+  name: string;
+  display_text: string;
+  style_type: "gold" | "gradient" | "glow";
+  gradient_from: string;
+  gradient_to: string;
+  glow_color: string;
+  created_at: string;
+};
+
+export type UserTitle = {
+  id: string;
+  user_id: string;
+  title_id: string;
+  granted_by: string | null;
+  granted_at: string;
 };
 
 export type UserCardBackground = {

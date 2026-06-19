@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { PlayerCard } from "@/components/leaderboard/player-card";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import type { LeaderboardEntry, Profile, CardBackground } from "@/lib/types";
+import type { LeaderboardEntry, Profile, CardBackground, CardTitle } from "@/lib/types";
 
 const TIERS = [
   { key: "high", label: "HIGH" },
@@ -36,6 +36,7 @@ export function LeaderboardClient({
     profile: Profile | null;
   } | null>(null);
   const [backgrounds, setBackgrounds] = useState<CardBackground[]>([]);
+  const [titles, setTitles] = useState<CardTitle[]>([]);
   const [liveProfiles, setLiveProfiles] = useState<Profile[]>(profiles);
   const supabase = createClient();
 
@@ -46,6 +47,9 @@ export function LeaderboardClient({
   useEffect(() => {
     supabase.from("card_backgrounds").select("*").then(({ data }) => {
       if (data) setBackgrounds(data as CardBackground[]);
+    });
+    supabase.from("card_titles").select("*").then(({ data }) => {
+      if (data) setTitles(data as CardTitle[]);
     });
     if (user) {
       supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
@@ -69,6 +73,12 @@ export function LeaderboardClient({
     for (const bg of backgrounds) map.set(bg.id, bg);
     return map;
   }, [backgrounds]);
+
+  const titleMap = useMemo(() => {
+    const map = new Map<string, CardTitle>();
+    for (const t of titles) map.set(t.id, t);
+    return map;
+  }, [titles]);
 
   const profileMap = useMemo(() => {
     const map = new Map<string, Profile>();
@@ -185,6 +195,7 @@ export function LeaderboardClient({
         open={!!selectedPlayer}
         onOpenChange={(v) => { if (!v) setSelectedPlayer(null); }}
         cardBackground={selectedPlayer?.profile?.selected_card_background_id ? bgMap.get(selectedPlayer.profile.selected_card_background_id) : null}
+        cardTitle={selectedPlayer?.profile?.selected_title_id ? titleMap.get(selectedPlayer.profile.selected_title_id) : null}
       />
     </>
   );

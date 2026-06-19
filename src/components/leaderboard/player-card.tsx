@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users, Image, Film, BarChart3 } from "lucide-react";
-import type { Profile, CardBackground } from "@/lib/types";
+import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users, Image, Film, Crown } from "lucide-react";
+import type { Profile, CardBackground, CardTitle } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -15,7 +15,7 @@ type PlayerCardData = {
   profile: Profile | null;
 };
 
-export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data: PlayerCardData | null; open: boolean; onOpenChange: (v: boolean) => void; cardBackground?: CardBackground | null }) {
+export function PlayerCard({ data, open, onOpenChange, cardBackground, cardTitle }: { data: PlayerCardData | null; open: boolean; onOpenChange: (v: boolean) => void; cardBackground?: CardBackground | null; cardTitle?: CardTitle | null }) {
   const [shared, setShared] = useState(false);
 
   if (!data) return null;
@@ -26,12 +26,23 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data:
 
   const bg = cardBackground;
   const bgType = bg?.type || "gradient";
+  const title = cardTitle;
 
   const gradStyle = bg && bgType === "gradient"
     ? { backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})` }
     : bg && (bgType === "image" || bgType === "video")
     ? { backgroundImage: `url(${bg.file_url})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { backgroundImage: "linear-gradient(135deg, #92400e, #d97706, #fbbf24)" };
+
+  const titleStyle: React.CSSProperties = title?.style_type === "gold"
+    ? { color: "#FFD700", textShadow: "0 0 10px rgba(255,215,0,0.5)" }
+    : title?.style_type === "glow"
+    ? { color: "#fff", textShadow: `0 0 10px ${title.glow_color || "#fbbf24"}, 0 0 20px ${title.glow_color || "#fbbf24"}` }
+    : {};
+
+  const titleGradBg = title?.style_type === "gradient"
+    ? { backgroundImage: `linear-gradient(135deg, ${title.gradient_from || "#f59e0b"}, ${title.gradient_to || "#ef4444"})` }
+    : {};
 
   const handleShare = async () => {
     const text = `Check out ${data.player_name} on ThunderLeague!\nScore: ${data.score.toLocaleString()} | Wins: ${data.wins} | Losses: ${data.losses}`;
@@ -76,6 +87,14 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data:
           <div className="pl-0">
             <h2 className="text-xl font-bold">{p?.display_name || data.player_name}</h2>
             <p className="text-sm text-muted-foreground">@{p?.username || data.player_name}</p>
+            {title && (
+              <p className={`text-sm font-bold mt-1 ${title.style_type === "gradient" ? "bg-clip-text text-transparent" : ""}`}
+                style={title.style_type === "gradient" ? titleGradBg : titleStyle}
+              >
+                <Crown className="h-3.5 w-3.5 inline mr-1" />
+                {title.display_text}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-4">

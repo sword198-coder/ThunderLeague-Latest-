@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlayerCard } from "@/components/leaderboard/player-card";
-import { COUNTRIES, type CardBackground } from "@/lib/types";
+import { COUNTRIES, type CardBackground, type CardTitle as CardTitleType } from "@/lib/types";
 
 const WT_NATIONS = [
   { code: "us", label: "USA" },
@@ -62,6 +62,7 @@ export default function AccountPage() {
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [selectedBgId, setSelectedBgId] = useState<string | null>(null);
   const [showCardPreview, setShowCardPreview] = useState(false);
+  const [titles, setTitles] = useState<CardTitleType[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -87,6 +88,9 @@ export default function AccountPage() {
   useEffect(() => {
     supabase.from("card_backgrounds").select("*").then(({ data }) => {
       if (data) setBackgrounds(data as CardBackground[]);
+    });
+    supabase.from("card_titles").select("*").then(({ data }) => {
+      if (data) setTitles(data as CardTitleType[]);
     });
     if (user) {
       supabase.from("user_card_backgrounds").select("background_id").eq("user_id", user.id).then(({ data }) => {
@@ -236,6 +240,7 @@ export default function AccountPage() {
   };
 
   const selectedBackground = backgrounds.find((b) => b.id === selectedBgId);
+  const selectedTitle = profile?.selected_title_id && titles.length > 0 ? titles.find((t) => t.id === profile.selected_title_id) ?? null : null;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
@@ -575,6 +580,7 @@ export default function AccountPage() {
         open={showCardPreview}
         onOpenChange={setShowCardPreview}
         cardBackground={selectedBackground}
+        cardTitle={selectedTitle}
       />
     </div>
   );

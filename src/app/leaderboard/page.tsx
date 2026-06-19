@@ -30,7 +30,7 @@ export default async function LeaderboardPage() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, username, avatar_url, war_thunder_username, squadron_name, nationality, discord_username, thunder_points, selected_card_background_id");
+    .select("id, display_name, username, avatar_url, war_thunder_username, squadron_name, nationality, discord_username, thunder_points, selected_card_background_id, selected_title_id");
 
   return (
     <div className="relative min-h-screen">
