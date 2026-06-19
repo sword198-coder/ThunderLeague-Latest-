@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown } from "lucide-react";
+import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown, Megaphone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -183,6 +183,24 @@ export default function AdminDashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               Gold, gradient, or glow titles that appear on player cards.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/announcements">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Announcements
+            </CardTitle>
+            <CardDescription>
+              Send popup cards to all users
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Create popup announcements with text, checkboxes, choices, or text answers.
             </p>
           </CardContent>
         </Card>

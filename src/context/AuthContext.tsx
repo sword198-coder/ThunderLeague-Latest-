@@ -90,17 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 4000);
 
     const init = async () => {
-      if (!mounted) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setUser(user);
-
-      if (user) {
-        const p = await fetchProfile(user.id);
+      try {
         if (!mounted) return;
-        setProfile(p);
-      }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!mounted) return;
+        setUser(user);
 
+        if (user) {
+          const p = await fetchProfile(user.id);
+          if (!mounted) return;
+          setProfile(p);
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      }
       clearTimeout(timerRef.current);
       if (mounted) setLoading(false);
     };

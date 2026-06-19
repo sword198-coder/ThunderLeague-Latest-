@@ -81,13 +81,13 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="border rounded-lg overflow-hidden max-w-lg mx-auto">
       <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
         <MessageCircle className="h-4 w-4" />
         <span className="font-semibold text-sm">Tournament Chat</span>
       </div>
 
-      <div className="h-80 overflow-y-auto p-4 space-y-3">
+      <div className="h-72 sm:h-80 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">No messages yet</p>
         )}

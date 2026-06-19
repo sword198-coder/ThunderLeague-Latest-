@@ -88,6 +88,27 @@ export type Notification = {
   created_at: string;
 };
 
+export type Announcement = {
+  id: string;
+  title: string;
+  content: string;
+  type: "info" | "checkbox" | "choices" | "text" | "choices+text";
+  options: string[];
+  created_by: string | null;
+  created_at: string;
+};
+
+export type UserAnnouncement = {
+  id: string;
+  announcement_id: string;
+  user_id: string;
+  acknowledged: boolean;
+  checkbox_checked: boolean;
+  choice_response: string;
+  text_response: string;
+  created_at: string;
+};
+
 export type SiteSetting = {
   key: string;
   value: string;
