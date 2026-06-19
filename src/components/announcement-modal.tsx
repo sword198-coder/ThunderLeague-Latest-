@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import type { Announcement } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -24,10 +24,12 @@ export function AnnouncementModal() {
   const [choiceResponse, setChoiceResponse] = useState("");
   const [textResponse, setTextResponse] = useState("");
   const [saving, setSaving] = useState(false);
+  const checkingRef = useRef(false);
 
-  useEffect(() => {
-    if (!user) { setAnnouncement(null); return; }
-    const check = async () => {
+  const checkAnnouncement = async () => {
+    if (!user || checkingRef.current) return;
+    checkingRef.current = true;
+    try {
       const { data: anns } = await supabase
         .from("announcements")
         .select("*")
@@ -37,6 +39,8 @@ export function AnnouncementModal() {
       if (!anns || anns.length === 0) return;
 
       const latest = anns[0] as Announcement;
+      if (announcement?.id === latest.id) return;
+
       const { data: existing } = await supabase
         .from("user_announcements")
         .select("id, acknowledged")
@@ -46,29 +50,42 @@ export function AnnouncementModal() {
 
       if (existing?.acknowledged) return;
 
-      if (existing) {
-        setUserAnnouncementId(existing.id);
-      } else {
+      let uaId = existing?.id;
+      if (!uaId) {
         const { data: insertData } = await supabase
           .from("user_announcements")
           .insert({ announcement_id: latest.id, user_id: user.id })
           .select("id")
           .single();
-        if (insertData) setUserAnnouncementId(insertData.id);
+        if (insertData) uaId = insertData.id;
       }
 
+      setUserAnnouncementId(uaId);
       setAnnouncement(latest);
       setCheckboxChecked(false);
       setChoiceResponse("");
       setTextResponse("");
-    };
-    check();
-  }, [user, supabase]);
+    } finally {
+      checkingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!user) { setAnnouncement(null); return; }
+    checkAnnouncement();
+
+    const channel = supabase
+      .channel("announcements-live")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "announcements" }, () => { checkAnnouncement(); })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   const handleAcknowledge = async () => {
     if (!announcement || !userAnnouncementId) return;
-    if (announcement.type === "checkbox" && !checkboxChecked) { return; }
-    if ((announcement.type === "choices" || announcement.type === "choices+text") && !choiceResponse) { return; }
+    if (announcement.type === "checkbox" && !checkboxChecked) return;
+    if ((announcement.type === "choices" || announcement.type === "choices+text") && !choiceResponse) return;
     setSaving(true);
     const updates: Record<string, unknown> = { acknowledged: true };
     if (checkboxChecked) updates.checkbox_checked = true;
@@ -127,7 +144,7 @@ export function AnnouncementModal() {
         </div>
 
         <Button onClick={handleAcknowledge} disabled={saving || (announcement.type === "checkbox" && !checkboxChecked) || ((announcement.type === "choices" || announcement.type === "choices+text") && !choiceResponse)} className="w-full">
-          {saving && <span className="animate-spin mr-1">⏳</span>}
+          {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
           OK
         </Button>
       </DialogContent>
