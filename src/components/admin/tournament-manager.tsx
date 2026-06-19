@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell, MessageCircle, Eye, EyeOff, Lock, Unlock } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import type { Tournament, TournamentMatch } from "@/lib/types";
+import type { Tournament, TournamentMatch, TournamentChatMessage } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +47,8 @@ const schema = z.object({
   max_players: z.number().int().min(1),
   system: z.enum(["1v1", "4v4"]),
   status: z.enum(["upcoming", "active", "completed", "cancelled"]),
+  chat_enabled: z.boolean().optional(),
+  chat_visible: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -91,6 +93,9 @@ export function TournamentManager() {
   const [newMatchP2, setNewMatchP2] = useState("");
   const [newMatchT1, setNewMatchT1] = useState<string[]>([]);
   const [newMatchT2, setNewMatchT2] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<(TournamentChatMessage & { name: string })[]>([]);
+  const [chatEnabled, setChatEnabled] = useState(true);
+  const [chatVisible, setChatVisible] = useState(true);
   const supabase = createClient();
 
   const {
@@ -116,7 +121,7 @@ export function TournamentManager() {
 
   const startCreate = () => {
     setEditing(null);
-    reset({ status: "upcoming", mode: "air", tier: "mid", max_players: 16, system: "1v1", description: "", battle_rating: "" });
+    reset({ status: "upcoming", mode: "air", tier: "mid", max_players: 16, system: "1v1", description: "", battle_rating: "", chat_enabled: true, chat_visible: true });
     setShowForm(true);
   };
 
@@ -132,6 +137,8 @@ export function TournamentManager() {
     setValue("max_players", t.max_players);
     setValue("system", t.system);
     setValue("status", t.status);
+    setValue("chat_enabled", t.chat_enabled);
+    setValue("chat_visible", t.chat_visible);
     setShowForm(true);
   };
 
@@ -145,7 +152,7 @@ export function TournamentManager() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       title: data.title,
       description: data.description || null,
       mode: data.mode,
@@ -156,6 +163,8 @@ export function TournamentManager() {
       max_players: data.max_players,
       system: data.system,
       status: data.status,
+      chat_enabled: data.chat_enabled ?? true,
+      chat_visible: data.chat_visible ?? true,
     };
 
     if (editing) {
@@ -239,6 +248,25 @@ export function TournamentManager() {
 
   const openManage = async (t: Tournament) => {
     setManageTournament(t);
+    setChatEnabled(t.chat_enabled);
+    setChatVisible(t.chat_visible);
+
+    const { data: msgs } = await supabase
+      .from("tournament_chat_messages")
+      .select("*")
+      .eq("tournament_id", t.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (msgs) {
+      const userIds = [...new Set(msgs.map((m) => m.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, username")
+        .in("id", userIds);
+      const nameMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name || p.username]));
+      setChatMessages(msgs.map((m) => ({ ...m, name: nameMap.get(m.user_id) || "Unknown" })));
+    }
 
     const { data: parts } = await supabase
       .from("tournament_participants")
@@ -346,6 +374,22 @@ export function TournamentManager() {
     if (error) { toast.error("Failed to delete match"); return; }
     toast.success("Match deleted");
     if (manageTournament) openManage(manageTournament);
+  };
+
+  const updateChatSetting = async (field: "chat_enabled" | "chat_visible", value: boolean) => {
+    if (!manageTournament) return;
+    const { error } = await supabase.from("tournaments").update({ [field]: value }).eq("id", manageTournament.id);
+    if (error) { toast.error("Failed to update chat setting"); return; }
+    if (field === "chat_enabled") setChatEnabled(value);
+    else setChatVisible(value);
+    toast.success(field === "chat_enabled" ? (value ? "Chat enabled" : "Chat disabled") : (value ? "Chat visible" : "Chat hidden"));
+  };
+
+  const deleteChatMessage = async (msgId: string) => {
+    const { error } = await supabase.from("tournament_chat_messages").delete().eq("id", msgId);
+    if (error) { toast.error("Failed to delete message"); return; }
+    setChatMessages((prev) => prev.filter((m) => m.id !== msgId));
+    toast.success("Message deleted");
   };
 
   const statusBadge = (s: string) => {
@@ -456,6 +500,16 @@ export function TournamentManager() {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
+              </div>
+              <div className="flex gap-4 border-t pt-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" {...register("chat_enabled")} defaultChecked />
+                  <span className="text-sm">Chat Enabled</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" {...register("chat_visible")} defaultChecked />
+                  <span className="text-sm">Chat Visible</span>
+                </label>
               </div>
               <div className="flex gap-2">
                 <Button type="submit" disabled={isSubmitting}>
@@ -766,6 +820,41 @@ export function TournamentManager() {
                   No matches yet. Use the form above to create one.
                 </p>
               )}
+            </div>
+
+            <div className="border rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Chat Settings
+              </h4>
+              <div className="flex gap-4">
+                <Button size="sm" variant={chatEnabled ? "default" : "outline"} onClick={() => updateChatSetting("chat_enabled", !chatEnabled)}>
+                  {chatEnabled ? <Unlock className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
+                  {chatEnabled ? "Chat Enabled" : "Chat Disabled"}
+                </Button>
+                <Button size="sm" variant={chatVisible ? "default" : "outline"} onClick={() => updateChatSetting("chat_visible", !chatVisible)}>
+                  {chatVisible ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
+                  {chatVisible ? "Chat Visible" : "Chat Hidden"}
+                </Button>
+              </div>
+
+              <div className="max-h-48 overflow-y-auto space-y-2 border rounded-md p-2">
+                {chatMessages.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">No messages in chat</p>
+                )}
+                {chatMessages.map((msg) => (
+                  <div key={msg.id} className="flex items-start justify-between gap-2 p-2 rounded bg-muted/30">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold">{msg.name}</p>
+                      <p className="text-xs text-muted-foreground break-words">{msg.message}</p>
+                      <p className="text-[10px] text-muted-foreground/60">{format(new Date(msg.created_at), "MMM d, HH:mm")}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive" onClick={() => deleteChatMessage(msg.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </DialogContent>

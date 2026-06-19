@@ -117,6 +117,14 @@ export type Vote = {
   created_at: string;
 };
 
+export type TournamentChatMessage = {
+  id: string;
+  tournament_id: string;
+  user_id: string;
+  message: string;
+  created_at: string;
+};
+
 export type Tournament = {
   id: string;
   title: string;
@@ -132,6 +140,8 @@ export type Tournament = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  chat_enabled: boolean;
+  chat_visible: boolean;
 };
 
 export type TournamentParticipant = {

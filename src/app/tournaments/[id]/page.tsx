@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { TournamentChat } from "@/components/tournament-chat";
 
 const MODE_LABELS: Record<string, string> = { air: "Air", ground: "Ground", both: "Air & Ground" };
 const TIER_LABELS: Record<string, string> = { low: "Low Tier", mid: "Mid Tier", high: "High Tier", top: "Top Tier" };
@@ -248,7 +249,9 @@ export default function TournamentDetailPage() {
           </CardContent>
         </Card>
       )}
-
+      {tournament.chat_visible && (
+        <TournamentChat tournamentId={tournament.id} isUserApproved={participants.some((p) => p.user_id === user?.id && p.status === "approved")} chatEnabled={tournament.chat_enabled} />
+      )}
       {matches.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
