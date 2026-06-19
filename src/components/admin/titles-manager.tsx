@@ -29,6 +29,7 @@ export function TitlesManager() {
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [selectedTitle, setSelectedTitle] = useState<string>("");
+  const [grantColor, setGrantColor] = useState("");
   const [granting, setGranting] = useState(false);
   const supabase = createClient();
 
@@ -40,7 +41,7 @@ export function TitlesManager() {
   const fetchProfiles = useCallback(async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, display_name, username, selected_title_id");
+      .select("id, display_name, username, selected_title_id, title_color");
     if (data) setProfiles(data as Profile[]);
   }, [supabase]);
 
@@ -90,11 +91,14 @@ export function TitlesManager() {
       title_id: selectedTitle,
     });
     if (error) { toast.error(error.message); setGranting(false); return; }
-    await supabase.from("profiles").update({ selected_title_id: selectedTitle }).eq("id", selectedUser.id);
+    const updates: Record<string, unknown> = { selected_title_id: selectedTitle };
+    if (grantColor) updates.title_color = grantColor;
+    await supabase.from("profiles").update(updates).eq("id", selectedUser.id);
     toast.success(`Granted title to ${selectedUser.display_name || selectedUser.username}`);
     setSelectedUser(null);
     setSearch("");
     setSelectedTitle("");
+    setGrantColor("");
     await fetchProfiles();
     setGranting(false);
   };
@@ -250,6 +254,16 @@ export function TitlesManager() {
               </SelectContent>
             </Select>
           </div>
+          {selectedTitle && (
+            <div className="space-y-1">
+              <Label>Override Color <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <div className="flex gap-2 items-center">
+                <input type="color" value={grantColor || "#ffffff"} onChange={(e) => setGrantColor(e.target.value)} className="h-8 w-10 rounded cursor-pointer" />
+                <Input value={grantColor} onChange={(e) => setGrantColor(e.target.value)} placeholder="#FFFFFF" />
+                {grantColor && <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setGrantColor("")}>Clear</Button>}
+              </div>
+            </div>
+          )}
         </div>
         <Button onClick={handleGrantTitle} disabled={granting || !selectedUser || !selectedTitle}>
           {granting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
@@ -287,17 +301,17 @@ export function TitlesManager() {
           {profiles.filter((p) => p.selected_title_id).map((p) => {
             const t = titles.find((t) => t.id === p.selected_title_id);
             return (
-              <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                <div>
-                  <span className="font-medium">{p.display_name || p.username}</span>
-                  {t && (
-                    <span className={`ml-2 text-sm font-bold ${titleClass(t)}`}
-                      style={t.style_type !== "gradient" ? titleStyle(t) : titleGradStyle(t)}
-                    >
-                      {t.display_text}
-                    </span>
-                  )}
-                </div>
+                  <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded">
+                    <div>
+                      <span className="font-medium">{p.display_name || p.username}</span>
+                      {t && (
+                        <span className={`ml-2 text-sm font-bold ${t.style_type === "gradient" && !p.title_color ? "bg-clip-text text-transparent" : ""}`}
+                          style={p.title_color ? { color: p.title_color } : t.style_type !== "gradient" ? titleStyle(t) : titleGradStyle(t)}
+                        >
+                          {t.display_text}
+                        </span>
+                      )}
+                    </div>
                 <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => handleRemoveTitle(p.id)}>
                   Remove
                 </Button>

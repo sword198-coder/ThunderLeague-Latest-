@@ -34,13 +34,19 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground, cardTitle
     ? { backgroundImage: `url(${bg.file_url})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { backgroundImage: "linear-gradient(135deg, #92400e, #d97706, #fbbf24)" };
 
-  const titleStyle: React.CSSProperties = title?.style_type === "gold"
+  const titleTextColor = p?.title_color || null;
+
+  const titleStyle: React.CSSProperties = titleTextColor
+    ? { color: titleTextColor }
+    : title?.style_type === "gold"
     ? { color: "#FFD700", textShadow: "0 0 10px rgba(255,215,0,0.5)" }
     : title?.style_type === "glow"
     ? { color: "#fff", textShadow: `0 0 10px ${title.glow_color || "#fbbf24"}, 0 0 20px ${title.glow_color || "#fbbf24"}` }
     : {};
 
-  const titleGradBg = title?.style_type === "gradient"
+  const titleGradBg = titleTextColor
+    ? {}
+    : title?.style_type === "gradient"
     ? { backgroundImage: `linear-gradient(135deg, ${title.gradient_from || "#f59e0b"}, ${title.gradient_to || "#ef4444"})` }
     : {};
 
@@ -86,10 +92,9 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground, cardTitle
         <div className="pt-12 pb-4 px-6 space-y-4">
           <div className="pl-0">
             <h2 className="text-xl font-bold">{p?.display_name || data.player_name}</h2>
-            <p className="text-sm text-muted-foreground">@{p?.username || data.player_name}</p>
             {title && (
-              <p className={`text-sm font-bold mt-1 ${title.style_type === "gradient" ? "bg-clip-text text-transparent" : ""}`}
-                style={title.style_type === "gradient" ? titleGradBg : titleStyle}
+              <p className={`text-sm font-bold mt-1 ${title.style_type === "gradient" && !p?.title_color ? "bg-clip-text text-transparent" : ""}`}
+                style={title.style_type === "gradient" && !p?.title_color ? titleGradBg : titleStyle}
               >
                 <Crown className="h-3.5 w-3.5 inline mr-1" />
                 {title.display_text}

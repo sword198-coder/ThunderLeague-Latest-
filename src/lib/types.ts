@@ -16,6 +16,7 @@ export type Profile = {
   last_active_at: string | null;
   selected_card_background_id: string | null;
   selected_title_id: string | null;
+  title_color: string | null;
   play_countries: string[] | null;
   play_tiers: string[] | null;
   play_mode: "air" | "ground" | "both" | null;
