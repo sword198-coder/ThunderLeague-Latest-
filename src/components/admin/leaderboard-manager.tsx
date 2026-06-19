@@ -54,6 +54,7 @@ export function LeaderboardManager() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const supabase = createClient();
 
   const fetchEntries = useCallback(async () => {
@@ -68,7 +69,7 @@ export function LeaderboardManager() {
   const fetchProfiles = useCallback(async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, display_name, username, avatar_url, role, email, first_name, last_name, war_thunder_username, squadron_name, nationality, discord_username, thunder_points, last_active_at, play_countries, play_tiers, play_mode, created_at, mfa_enrolled");
+      .select(      "id, display_name, username, avatar_url, role, email, first_name, last_name, war_thunder_username, squadron_name, nationality, discord_username, thunder_points, last_active_at, play_countries, play_tiers, play_mode, created_at, mfa_enrolled, selected_card_background_id");
     if (data) setProfiles(data as Profile[]);
   }, [supabase]);
 
@@ -92,12 +93,14 @@ export function LeaderboardManager() {
   const selectProfile = (p: Profile) => {
     setForm({ ...form, player_name: p.display_name || p.username || "" });
     setUserSearch(p.display_name || p.username || "");
+    setSelectedUserId(p.id);
     setShowUserDropdown(false);
   };
 
   const resetForm = () => {
     setForm(emptyForm);
     setUserSearch("");
+    setSelectedUserId(null);
     setEditingId(null);
   };
 
@@ -113,12 +116,13 @@ export function LeaderboardManager() {
       losses: String(entry.losses),
     });
     setUserSearch(entry.player_name);
+    setSelectedUserId(entry.user_id);
     setEditingId(entry.id);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const payload = {
+    const payload: Record<string, unknown> = {
       rank: parseInt(form.rank) || 0,
       player_name: form.player_name,
       tier: form.tier,
@@ -127,6 +131,7 @@ export function LeaderboardManager() {
       score: parseInt(form.score) || 0,
       wins: parseInt(form.wins) || 0,
       losses: parseInt(form.losses) || 0,
+      user_id: selectedUserId,
     };
 
     let error;

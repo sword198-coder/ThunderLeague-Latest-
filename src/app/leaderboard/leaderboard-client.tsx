@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Trophy, Swords, BarChart3 } from "lucide-react";
 import {
   Table,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PlayerCard } from "@/components/leaderboard/player-card";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import type { LeaderboardEntry, Profile, CardBackground } from "@/lib/types";
 
 const TIERS = [
@@ -28,19 +29,40 @@ export function LeaderboardClient({
   entries: LeaderboardEntry[];
   profiles: Profile[];
 }) {
+  const { user } = useAuth();
   const [activeTier, setActiveTier] = useState<string>("high");
   const [selectedPlayer, setSelectedPlayer] = useState<{
     data: LeaderboardEntry;
     profile: Profile | null;
   } | null>(null);
   const [backgrounds, setBackgrounds] = useState<CardBackground[]>([]);
+  const [liveProfiles, setLiveProfiles] = useState<Profile[]>(profiles);
   const supabase = createClient();
+
+  useEffect(() => {
+    setLiveProfiles(profiles);
+  }, [profiles]);
 
   useEffect(() => {
     supabase.from("card_backgrounds").select("*").then(({ data }) => {
       if (data) setBackgrounds(data as CardBackground[]);
     });
-  }, []);
+    if (user) {
+      supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
+        if (data) {
+          setLiveProfiles((prev) => {
+            const idx = prev.findIndex((p) => p.id === user.id);
+            if (idx >= 0) {
+              const copy = [...prev];
+              copy[idx] = data as Profile;
+              return copy;
+            }
+            return [...prev, data as Profile];
+          });
+        }
+      });
+    }
+  }, [user]);
 
   const bgMap = useMemo(() => {
     const map = new Map<string, CardBackground>();
@@ -50,13 +72,13 @@ export function LeaderboardClient({
 
   const profileMap = useMemo(() => {
     const map = new Map<string, Profile>();
-    for (const p of profiles) {
+    for (const p of liveProfiles) {
       if (p.display_name) map.set(p.display_name.toLowerCase(), p);
       if (p.username) map.set(p.username.toLowerCase(), p);
       map.set(p.id, p);
     }
     return map;
-  }, [profiles]);
+  }, [liveProfiles]);
 
   const filteredEntries = useMemo(
     () => entries.filter((e) => e.tier === activeTier),
