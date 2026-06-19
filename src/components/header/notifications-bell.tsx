@@ -36,16 +36,11 @@ export function NotificationsBell() {
 
       const { data } = await query
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(20);
 
       if (data) {
-        const globalTitles = new Set(data.filter((n: Notification) => n.is_global).map((n: Notification) => n.title + "|||" + n.message));
-        const filtered = data.filter((n: Notification) => {
-          if (!n.is_global && n.read && globalTitles.has(n.title + "|||" + n.message)) return false;
-          return true;
-        });
-        setNotifications(filtered);
-        setUnreadCount(filtered.filter((n: Notification) => !n.read).length);
+        setNotifications(data);
+        setUnreadCount(data.filter((n: Notification) => !n.read).length);
       }
     };
 
@@ -60,7 +55,8 @@ export function NotificationsBell() {
           const n = payload.new as Notification;
           if (profile?.created_at && new Date(n.created_at) < new Date(profile.created_at)) return;
           if (n.user_id && n.user_id !== currentUserId) return;
-          if (n.is_global) { setNotifications((prev) => { if (prev.some((x) => x.id === n.id)) return prev; return [n, ...prev]; }); if (!n.read) setUnreadCount((prev) => prev + 1); }
+          setNotifications((prev) => { if (prev.some((x) => x.id === n.id)) return prev; return [n, ...prev]; });
+          if (!n.read) setUnreadCount((prev) => prev + 1);
         }
       )
       .subscribe();
@@ -81,33 +77,7 @@ export function NotificationsBell() {
   }, []);
 
   const markAsRead = async (notif: Notification) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    if (notif.is_global) {
-      const { data: existing } = await supabase
-        .from("notifications")
-        .select("id")
-        .eq("title", notif.title)
-        .eq("message", notif.message)
-        .eq("is_global", false)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!existing) {
-        await supabase.from("notifications").insert({
-          user_id: user.id,
-          title: notif.title,
-          message: notif.message,
-          type: notif.type,
-          is_global: false,
-          read: true,
-        });
-      }
-    } else {
-      await supabase.from("notifications").update({ read: true }).eq("id", notif.id);
-    }
-
+    await supabase.from("notifications").update({ read: true }).eq("id", notif.id);
     setNotifications((prev) =>
       prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
     );
@@ -115,35 +85,10 @@ export function NotificationsBell() {
   };
 
   const markAllAsRead = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     const unread = notifications.filter((n) => !n.read);
     for (const n of unread) {
-      if (n.is_global) {
-        const { data: existing } = await supabase
-          .from("notifications")
-          .select("id")
-          .eq("title", n.title)
-          .eq("message", n.message)
-          .eq("is_global", false)
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (!existing) {
-          await supabase.from("notifications").insert({
-            user_id: user.id,
-            title: n.title,
-            message: n.message,
-            type: n.type,
-            is_global: false,
-            read: true,
-          });
-        }
-      } else {
-        await supabase.from("notifications").update({ read: true }).eq("id", n.id);
-      }
+      await supabase.from("notifications").update({ read: true }).eq("id", n.id);
     }
-
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
   };
