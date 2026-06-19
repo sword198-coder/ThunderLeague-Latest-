@@ -29,6 +29,8 @@ export type LeaderboardEntry = {
   score: number;
   wins: number;
   losses: number;
+  user_id: string | null;
+  tier: "low" | "mid" | "high";
   updated_at: string;
 };
 

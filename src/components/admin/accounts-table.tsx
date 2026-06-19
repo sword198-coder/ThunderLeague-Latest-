@@ -128,7 +128,7 @@ export function AccountsTable() {
             <TableBody>
               {accounts.map((a) => {
                 const lastActive = a.last_active_at ? new Date(a.last_active_at) : null;
-                const isOnline = lastActive && differenceInMinutes(new Date(), lastActive) < 5;
+                const isOnline = lastActive && differenceInMinutes(new Date(), lastActive) < 2;
                 const isWeek = lastActive && differenceInDays(new Date(), lastActive) >= 7;
                 const dotColor = isOnline ? "bg-green-500" : isWeek ? "bg-red-500" : "bg-gray-400";
                 return (

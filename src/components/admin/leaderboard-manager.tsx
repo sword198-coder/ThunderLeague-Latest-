@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, X, Check } from "lucide-react";
+import { Pencil, Trash2, Plus, X, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { LeaderboardEntry } from "@/lib/types";
+import type { LeaderboardEntry, Profile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -20,6 +27,7 @@ import {
 type FormState = {
   rank: string;
   player_name: string;
+  tier: "low" | "mid" | "high";
   squadron_name: string;
   battle_rating: string;
   score: string;
@@ -30,6 +38,7 @@ type FormState = {
 const emptyForm: FormState = {
   rank: "",
   player_name: "",
+  tier: "high",
   squadron_name: "",
   battle_rating: "",
   score: "",
@@ -42,27 +51,53 @@ export function LeaderboardManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const supabase = createClient();
 
   const fetchEntries = useCallback(async () => {
     const { data } = await supabase
       .from("leaderboard_entries")
       .select("*")
+      .order("tier", { ascending: true })
       .order("rank", { ascending: true });
     if (data) setEntries(data);
   }, [supabase]);
 
+  const fetchProfiles = useCallback(async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, display_name, username, avatar_url, role, email, first_name, last_name, war_thunder_username, squadron_name, nationality, discord_username, thunder_points, last_active_at, play_countries, play_tiers, play_mode, created_at, mfa_enrolled");
+    if (data) setProfiles(data as Profile[]);
+  }, [supabase]);
+
   useEffect(() => {
     fetchEntries();
+    fetchProfiles();
     const channel = supabase
       .channel("admin-leaderboard")
       .on("postgres_changes", { event: "*", schema: "public", table: "leaderboard_entries" }, () => { fetchEntries(); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [fetchEntries]);
+  }, [fetchEntries, fetchProfiles]);
+
+  const filteredProfiles = profiles.filter(
+    (p) =>
+      (p.display_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        p.username?.toLowerCase().includes(userSearch.toLowerCase())) &&
+      userSearch.length > 0
+  );
+
+  const selectProfile = (p: Profile) => {
+    setForm({ ...form, player_name: p.display_name || p.username || "" });
+    setUserSearch(p.display_name || p.username || "");
+    setShowUserDropdown(false);
+  };
 
   const resetForm = () => {
     setForm(emptyForm);
+    setUserSearch("");
     setEditingId(null);
   };
 
@@ -70,12 +105,14 @@ export function LeaderboardManager() {
     setForm({
       rank: String(entry.rank),
       player_name: entry.player_name,
+      tier: entry.tier,
       squadron_name: entry.squadron_name ?? "",
       battle_rating: entry.battle_rating,
       score: String(entry.score),
       wins: String(entry.wins),
       losses: String(entry.losses),
     });
+    setUserSearch(entry.player_name);
     setEditingId(entry.id);
   };
 
@@ -84,6 +121,7 @@ export function LeaderboardManager() {
     const payload = {
       rank: parseInt(form.rank) || 0,
       player_name: form.player_name,
+      tier: form.tier,
       squadron_name: form.squadron_name || null,
       battle_rating: form.battle_rating,
       score: parseInt(form.score) || 0,
@@ -141,9 +179,44 @@ export function LeaderboardManager() {
             <Label>Rank</Label>
             <Input value={form.rank} onChange={(e) => setForm({ ...form, rank: e.target.value })} placeholder="1" />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 relative">
             <Label>Player Name</Label>
-            <Input value={form.player_name} onChange={(e) => setForm({ ...form, player_name: e.target.value })} placeholder="AcePilot" />
+            <div className="relative">
+              <Input
+                value={userSearch}
+                onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true); setForm({ ...form, player_name: e.target.value }); }}
+                onFocus={() => setShowUserDropdown(true)}
+                placeholder="Search user..."
+              />
+              <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            {showUserDropdown && filteredProfiles.length > 0 && (
+              <div className="absolute z-10 top-full mt-1 w-full bg-popover border rounded-md shadow-lg max-h-40 overflow-y-auto">
+                {filteredProfiles.slice(0, 10).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => selectProfile(p)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                  >
+                    {p.display_name || p.username}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label>Tier</Label>
+            <Select value={form.tier} onValueChange={(v: string | null) => v && setForm({ ...form, tier: v as "low" | "mid" | "high" })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="high">HIGH</SelectItem>
+                <SelectItem value="mid">MID</SelectItem>
+                <SelectItem value="low">LOW</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label>Squadron</Label>
@@ -184,6 +257,7 @@ export function LeaderboardManager() {
             <TableRow>
               <TableHead className="w-12 text-center">#</TableHead>
               <TableHead>Player</TableHead>
+              <TableHead className="w-16 text-center">Tier</TableHead>
               <TableHead className="hidden sm:table-cell">Squadron</TableHead>
               <TableHead className="hidden md:table-cell">BR</TableHead>
               <TableHead className="text-right">Score</TableHead>
@@ -197,6 +271,15 @@ export function LeaderboardManager() {
               <TableRow key={entry.id}>
                 <TableCell className="text-center">{entry.rank}</TableCell>
                 <TableCell className="font-medium">{entry.player_name}</TableCell>
+                <TableCell className="text-center">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                    entry.tier === "high" ? "bg-amber-500/20 text-amber-500" :
+                    entry.tier === "mid" ? "bg-blue-500/20 text-blue-500" :
+                    "bg-gray-500/20 text-gray-500"
+                  }`}>
+                    {entry.tier.toUpperCase()}
+                  </span>
+                </TableCell>
                 <TableCell className="hidden sm:table-cell text-muted-foreground">
                   {entry.squadron_name ?? "—"}
                 </TableCell>
@@ -220,7 +303,7 @@ export function LeaderboardManager() {
             ))}
             {entries.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No entries yet
                 </TableCell>
               </TableRow>

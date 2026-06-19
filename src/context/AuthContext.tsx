@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     let supabase: ReturnType<typeof createClient>;
 
-    // Heartbeat: update last_active_at every 2 minutes
+    // Heartbeat: update last_active_at every 30 seconds
     const heartbeatInterval = setInterval(async () => {
       const sb = supabaseRef.current;
       if (!sb) return;
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         await sb.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", user.id);
       }
-    }, 120000);
+    }, 30000);
 
     try {
       supabase = createClient();
