@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users, Image, Film } from "lucide-react";
+import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users, Image, Film, BarChart3 } from "lucide-react";
 import type { Profile, CardBackground } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data:
     : { backgroundImage: "linear-gradient(135deg, #92400e, #d97706, #fbbf24)" };
 
   const handleShare = async () => {
-    const text = `Check out ${data.player_name} on ThunderLeague!\nWins: ${data.wins} | Losses: ${data.losses} | Score: ${data.score.toLocaleString()}`;
+    const text = `Check out ${data.player_name} on ThunderLeague!\nScore: ${data.score.toLocaleString()} | Wins: ${data.wins} | Losses: ${data.losses}`;
     if (navigator.share) {
       await navigator.share({ title: `${data.player_name} - ThunderLeague`, text });
     } else {
@@ -48,7 +48,7 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm p-0 overflow-hidden rounded-2xl">
         <div className="relative">
-          <div className="h-28 relative overflow-hidden" style={bgType === "gradient" ? gradStyle : {}}>
+          <div className="aspect-video relative overflow-hidden" style={bgType === "gradient" ? gradStyle : {}}>
             {bgType === "image" && (
               <img src={bg!.file_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
             )}
@@ -78,7 +78,11 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground }: { data:
             <p className="text-sm text-muted-foreground">@{p?.username || data.player_name}</p>
           </div>
 
-          <div className="flex gap-6">
+          <div className="flex gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-500">{data.score.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">Score</p>
+            </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-500">{data.wins}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1"><Trophy className="h-3 w-3" /> Wins</p>
