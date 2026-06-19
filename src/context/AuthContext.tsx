@@ -66,6 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     let supabase: ReturnType<typeof createClient>;
 
+    // Heartbeat: update last_active_at every 2 minutes
+    const heartbeatInterval = setInterval(async () => {
+      const sb = supabaseRef.current;
+      if (!sb) return;
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) {
+        await sb.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", user.id);
+      }
+    }, 120000);
+
     try {
       supabase = createClient();
     } catch {
@@ -125,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       clearTimeout(timerRef.current);
+      clearInterval(heartbeatInterval);
       subscription?.unsubscribe();
     };
   }, []);

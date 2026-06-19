@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Users, Send, Bell } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, Users, Send, Bell, Zap } from "lucide-react";
+import { format, differenceInMinutes, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
@@ -111,8 +111,10 @@ export function AccountsTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">Status</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Points</TableHead>
                 <TableHead>Display Name</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Discord</TableHead>
@@ -124,10 +126,26 @@ export function AccountsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.map((a) => (
+              {accounts.map((a) => {
+                const lastActive = a.last_active_at ? new Date(a.last_active_at) : null;
+                const isOnline = lastActive && differenceInMinutes(new Date(), lastActive) < 5;
+                const isWeek = lastActive && differenceInDays(new Date(), lastActive) >= 7;
+                const dotColor = isOnline ? "bg-green-500" : isWeek ? "bg-red-500" : "bg-gray-400";
+                return (
                 <TableRow key={a.id}>
+                  <TableCell>
+                    <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotColor}`} title={
+                      isOnline ? "Online" : isWeek ? "Offline over a week" : "Offline"
+                    } />
+                  </TableCell>
                   <TableCell className="font-medium">@{a.username}</TableCell>
                   <TableCell>{a.email}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-1 text-amber-500 font-medium">
+                      <Zap className="h-3.5 w-3.5" />
+                      {a.thunder_points}
+                    </span>
+                  </TableCell>
                   <TableCell>{a.display_name || "\u2014"}</TableCell>
                   <TableCell>
                     <Badge
@@ -154,7 +172,7 @@ export function AccountsTable() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              );})}
             </TableBody>
           </Table>
         </CardContent>

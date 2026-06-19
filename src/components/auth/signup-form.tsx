@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -16,6 +16,8 @@ import { TotpEnroll } from "./totp-enroll";
 
 export function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref");
   const [step, setStep] = useState<"form" | "totp" | "verify-email">("form");
   const [userId, setUserId] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
@@ -69,6 +71,21 @@ export function SignUpForm() {
     if (!user) {
       toast.error("Failed to create account");
       return;
+    }
+
+    // Track referral signup if code present
+    if (referralCode) {
+      const { data: link } = await supabase
+        .from("referral_links")
+        .select("id")
+        .eq("code", referralCode)
+        .maybeSingle();
+      if (link) {
+        await supabase.from("referral_signups").insert({
+          referral_link_id: link.id,
+          referred_user_id: user.id,
+        });
+      }
     }
 
     if (!authData.session) {

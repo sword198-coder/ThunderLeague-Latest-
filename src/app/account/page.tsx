@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Loader2, Flag, Camera, Globe, MessageCircle } from "lucide-react";
+import { Upload, Loader2, Flag, Camera, Globe, MessageCircle, Zap, Copy, Check, Link } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,9 @@ export default function AccountPage() {
   const [nationality, setNationality] = useState("");
   const [discordUsername, setDiscordUsername] = useState("");
   const [playMode, setPlayMode] = useState("both");
+  const [referralLink, setReferralLink] = useState("");
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -66,6 +69,31 @@ export default function AccountPage() {
       setPlayMode(profile.play_mode ?? "both");
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("referral_links").select("code").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+        if (data) setReferralLink(`${window.location.origin}/auth/signup?ref=${data.code}`);
+      });
+    }
+  }, [user]);
+
+  const requestReferralLink = async () => {
+    if (!user) return;
+    setReferralLoading(true);
+    const code = (profile?.username || user.id.slice(0, 8)) + "-" + Math.random().toString(36).slice(2, 8);
+    const { error } = await supabase.from("referral_links").insert({ user_id: user.id, code });
+    setReferralLoading(false);
+    if (error) { toast.error("Failed to create referral link"); return; }
+    setReferralLink(`${window.location.origin}/auth/signup?ref=${code}`);
+    toast.success("Referral link created!");
+  };
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (loading) {
     return (
@@ -167,6 +195,10 @@ export default function AccountPage() {
               <AvatarImage src={profile?.avatar_url ?? undefined} />
               <AvatarFallback className="text-xl">{initials}</AvatarFallback>
             </Avatar>
+            <div className="absolute -bottom-1 -right-1 flex items-center gap-1 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+              <Zap className="h-3 w-3" />
+              {profile?.thunder_points ?? 0}
+            </div>
           </div>
           <div className="flex flex-col items-center sm:items-start gap-2">
             <p className="font-semibold text-lg">{profile?.display_name || profile?.username}</p>
@@ -353,6 +385,33 @@ export default function AccountPage() {
         {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Save Changes
       </Button>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link className="h-5 w-5" />
+            Referral Link
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Share your referral link and earn rewards when people sign up using it.
+          </p>
+          {referralLink ? (
+            <div className="flex items-center gap-2">
+              <code className="flex-1 p-2 bg-muted rounded text-sm break-all">{referralLink}</code>
+              <Button variant="outline" size="icon" onClick={copyLink}>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={requestReferralLink} disabled={referralLoading}>
+              {referralLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Request Referral Link
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

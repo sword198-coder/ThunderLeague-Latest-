@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MessageSquareText } from "lucide-react";
+import { MessageSquareText, Zap, Link as LinkIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +111,42 @@ export default function AdminDashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               View, reply, and resolve tickets from users.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/thunder-points">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-amber-500" />
+              Thunder Points
+            </CardTitle>
+            <CardDescription>
+              Give or deduct points from users
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Manage Thunder Points balance for all users.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/referrals">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LinkIcon className="h-5 w-5" />
+              Referrals
+            </CardTitle>
+            <CardDescription>
+              View referral links and signups
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Track referrals and verify signups.
             </p>
           </CardContent>
         </Card>

@@ -12,6 +12,8 @@ export type Profile = {
   squadron_name: string | null;
   nationality: string | null;
   discord_username: string | null;
+  thunder_points: number;
+  last_active_at: string | null;
   play_countries: string[] | null;
   play_tiers: string[] | null;
   play_mode: "air" | "ground" | "both" | null;
@@ -117,6 +119,30 @@ export type TournamentMatch = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ReferralLink = {
+  id: string;
+  user_id: string;
+  code: string;
+  created_at: string;
+};
+
+export type ReferralSignup = {
+  id: string;
+  referral_link_id: string;
+  referred_user_id: string;
+  verified: boolean;
+  created_at: string;
+};
+
+export type ThunderPointsLog = {
+  id: string;
+  user_id: string;
+  amount: number;
+  reason: string;
+  created_by: string | null;
+  created_at: string;
 };
 
 export type SupportTicket = {
