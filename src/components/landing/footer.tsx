@@ -26,7 +26,7 @@ export function Footer() {
   }, []);
 
   return (
-    <footer className="bg-cover bg-center border-t border-border py-12 px-4 min-h-[60vh] flex items-end" style={{ backgroundImage: "url(/background.png)" }}>
+    <footer className="bg-cover bg-center border-t border-border py-12 px-4 min-h-[60vh] flex items-end" style={{ backgroundImage: "url(/votesbackground.png)" }}>
       <div className="container mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>

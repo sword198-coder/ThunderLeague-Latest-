@@ -630,15 +630,15 @@ export function TournamentManager() {
       </Card>
 
       <Dialog open={!!manageTournament} onOpenChange={(o) => { if (!o) setManageTournament(null); }}>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="sticky top-0 bg-background z-10 pb-2 border-b mb-2">
             <DialogTitle className="flex items-center gap-2">
               <Swords className="h-5 w-5" />
               Manage Matches — {manageTournament?.title}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <h4 className="text-sm font-semibold mb-2">Approved Players ({approvedPlayers.length})</h4>
               <div className="flex flex-wrap gap-1.5">

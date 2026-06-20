@@ -83,17 +83,25 @@ export function TitlesManager() {
     await fetchTitles();
   };
 
+  const ensureUserTitle = async (userId: string, titleId: string) => {
+    const { error: delErr } = await supabase.from("user_titles").delete().eq("user_id", userId).eq("title_id", titleId);
+    if (delErr && !delErr.message.includes("No rows")) { return delErr; }
+    const { error } = await supabase.from("user_titles").insert({
+      user_id: userId,
+      title_id: titleId,
+    });
+    return error;
+  };
+
   const handleGrantTitle = async () => {
     if (!selectedUser || !selectedTitle) { toast.error("Select user and title"); return; }
     setGranting(true);
-    const { error } = await supabase.from("user_titles").upsert({
-      user_id: selectedUser.id,
-      title_id: selectedTitle,
-    }, { onConflict: "user_id,title_id" });
-    if (error) { toast.error(error.message); setGranting(false); return; }
+    const err = await ensureUserTitle(selectedUser.id, selectedTitle);
+    if (err) { toast.error(err.message); setGranting(false); return; }
     const updates: Record<string, unknown> = { selected_title_id: selectedTitle };
     if (grantColor) updates.title_color = grantColor;
-    await supabase.from("profiles").update(updates).eq("id", selectedUser.id);
+    const { error: profileErr } = await supabase.from("profiles").update(updates).eq("id", selectedUser.id);
+    if (profileErr) { toast.error(profileErr.message); setGranting(false); return; }
     toast.success(`Granted title to ${selectedUser.display_name || selectedUser.username}`);
     setSelectedUser(null);
     setSearch("");
@@ -105,21 +113,20 @@ export function TitlesManager() {
 
   const quickGrant = async (user: Profile, titleId: string) => {
     setGranting(true);
-    const { error } = await supabase.from("user_titles").upsert({
-      user_id: user.id,
-      title_id: titleId,
-    }, { onConflict: "user_id,title_id" });
-    if (error) { toast.error(error.message); setGranting(false); return; }
-    await supabase.from("profiles").update({ selected_title_id: titleId }).eq("id", user.id);
+    const err = await ensureUserTitle(user.id, titleId);
+    if (err) { toast.error(err.message); setGranting(false); return; }
+    const { error: profileErr } = await supabase.from("profiles").update({ selected_title_id: titleId }).eq("id", user.id);
+    if (profileErr) { toast.error(profileErr.message); setGranting(false); return; }
     toast.success(`Title assigned to ${user.display_name || user.username}`);
     await fetchProfiles();
     setGranting(false);
   };
 
   const handleRemoveTitle = async (userId: string) => {
-    const { error } = await supabase.from("profiles").update({ selected_title_id: null }).eq("id", userId);
-    if (error) { toast.error(error.message); return; }
-    await supabase.from("user_titles").delete().eq("user_id", userId);
+    const { error: profileErr } = await supabase.from("profiles").update({ selected_title_id: null, title_color: null }).eq("id", userId);
+    if (profileErr) { toast.error(profileErr.message); return; }
+    const { error: delErr } = await supabase.from("user_titles").delete().eq("user_id", userId);
+    if (delErr) { toast.error(delErr.message); return; }
     toast.success("Title removed from user");
     await fetchProfiles();
   };
