@@ -86,10 +86,10 @@ export function TitlesManager() {
   const handleGrantTitle = async () => {
     if (!selectedUser || !selectedTitle) { toast.error("Select user and title"); return; }
     setGranting(true);
-    const { error } = await supabase.from("user_titles").insert({
+    const { error } = await supabase.from("user_titles").upsert({
       user_id: selectedUser.id,
       title_id: selectedTitle,
-    });
+    }, { onConflict: "user_id,title_id" });
     if (error) { toast.error(error.message); setGranting(false); return; }
     const updates: Record<string, unknown> = { selected_title_id: selectedTitle };
     if (grantColor) updates.title_color = grantColor;
