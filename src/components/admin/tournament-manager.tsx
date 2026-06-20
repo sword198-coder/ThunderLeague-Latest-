@@ -96,6 +96,10 @@ export function TournamentManager() {
   const [chatMessages, setChatMessages] = useState<(TournamentChatMessage & { name: string })[]>([]);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [chatVisible, setChatVisible] = useState(true);
+  const [mediaLinks, setMediaLinks] = useState<{ id: string; platform: string; url: string; label: string; visible: boolean }[]>([]);
+  const [newMediaPlatform, setNewMediaPlatform] = useState("youtube");
+  const [newMediaUrl, setNewMediaUrl] = useState("");
+  const [newMediaLabel, setNewMediaLabel] = useState("");
   const supabase = createClient();
 
   const {
@@ -268,6 +272,13 @@ export function TournamentManager() {
       setChatMessages(msgs.map((m) => ({ ...m, name: nameMap.get(m.user_id) || "Unknown" })));
     }
 
+    const { data: mediaData } = await supabase
+      .from("tournament_media_links")
+      .select("*")
+      .eq("tournament_id", t.id)
+      .order("created_at", { ascending: true });
+    setMediaLinks(mediaData ?? []);
+
     const { data: parts } = await supabase
       .from("tournament_participants")
       .select("id, user_id, status, in_game_name")
@@ -390,6 +401,35 @@ export function TournamentManager() {
     if (error) { toast.error("Failed to delete message"); return; }
     setChatMessages((prev) => prev.filter((m) => m.id !== msgId));
     toast.success("Message deleted");
+  };
+
+  const addMediaLink = async () => {
+    if (!manageTournament || !newMediaUrl.trim()) { toast.error("Enter a URL"); return; }
+    const { data, error } = await supabase.from("tournament_media_links").insert({
+      tournament_id: manageTournament.id,
+      platform: newMediaPlatform,
+      url: newMediaUrl.trim(),
+      label: newMediaLabel.trim() || null,
+      visible: true,
+    }).select().single();
+    if (error) { toast.error(error.message); return; }
+    setMediaLinks((prev) => [...prev, data]);
+    setNewMediaUrl("");
+    setNewMediaLabel("");
+    toast.success("Link added");
+  };
+
+  const toggleMediaLink = async (linkId: string, visible: boolean) => {
+    const { error } = await supabase.from("tournament_media_links").update({ visible }).eq("id", linkId);
+    if (error) { toast.error(error.message); return; }
+    setMediaLinks((prev) => prev.map((l) => l.id === linkId ? { ...l, visible } : l));
+  };
+
+  const deleteMediaLink = async (linkId: string) => {
+    const { error } = await supabase.from("tournament_media_links").delete().eq("id", linkId);
+    if (error) { toast.error(error.message); return; }
+    setMediaLinks((prev) => prev.filter((l) => l.id !== linkId));
+    toast.success("Link deleted");
   };
 
   const statusBadge = (s: string) => {
@@ -852,6 +892,55 @@ export function TournamentManager() {
                     <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-destructive" onClick={() => deleteChatMessage(msg.id)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Media &amp; Social Links
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Platform</Label>
+                  <select value={newMediaPlatform} onChange={(e) => setNewMediaPlatform(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                    <option value="youtube">YouTube</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="twitch">Twitch</option>
+                    <option value="website">Website</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">URL</Label>
+                  <Input value={newMediaUrl} onChange={(e) => setNewMediaUrl(e.target.value)} placeholder="https://..." className="h-9 text-xs" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Label (optional)</Label>
+                  <div className="flex gap-1">
+                    <Input value={newMediaLabel} onChange={(e) => setNewMediaLabel(e.target.value)} placeholder="Watch Live" className="h-9 text-xs" />
+                    <Button size="sm" className="h-9 shrink-0" onClick={addMediaLink}><Plus className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {mediaLinks.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No links added yet</p>}
+                {mediaLinks.map((link) => (
+                  <div key={link.id} className="flex items-center justify-between gap-2 p-2 rounded bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Badge variant="outline" className="text-xs shrink-0">{link.platform}</Badge>
+                      <span className="text-xs truncate">{link.label || link.url}</span>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleMediaLink(link.id, !link.visible)} title={link.visible ? "Hide" : "Show"}>
+                        {link.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => deleteMediaLink(link.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

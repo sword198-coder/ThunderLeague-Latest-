@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { TournamentChat } from "@/components/tournament-chat";
+import { TournamentMediaCard } from "@/components/tournament-media-card";
 
 const MODE_LABELS: Record<string, string> = { air: "Air", ground: "Ground", both: "Air & Ground" };
 const TIER_LABELS: Record<string, string> = { low: "Low Tier", mid: "Mid Tier", high: "High Tier", top: "Top Tier" };
@@ -198,6 +199,8 @@ export default function TournamentDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <TournamentMediaCard tournamentId={tournament.id} />
 
       {participants.length > 0 && (
         <Card>

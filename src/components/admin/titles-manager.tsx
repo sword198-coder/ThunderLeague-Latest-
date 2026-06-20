@@ -103,6 +103,19 @@ export function TitlesManager() {
     setGranting(false);
   };
 
+  const quickGrant = async (user: Profile, titleId: string) => {
+    setGranting(true);
+    const { error } = await supabase.from("user_titles").upsert({
+      user_id: user.id,
+      title_id: titleId,
+    }, { onConflict: "user_id,title_id" });
+    if (error) { toast.error(error.message); setGranting(false); return; }
+    await supabase.from("profiles").update({ selected_title_id: titleId }).eq("id", user.id);
+    toast.success(`Title assigned to ${user.display_name || user.username}`);
+    await fetchProfiles();
+    setGranting(false);
+  };
+
   const handleRemoveTitle = async (userId: string) => {
     const { error } = await supabase.from("profiles").update({ selected_title_id: null }).eq("id", userId);
     if (error) { toast.error(error.message); return; }
@@ -212,7 +225,7 @@ export function TitlesManager() {
               <Input
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setSelectedUser(null); }}
-                placeholder="Search by username..."
+                placeholder="Search by username or display name..."
               />
               <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             </div>
@@ -223,10 +236,14 @@ export function TitlesManager() {
                     key={p.id}
                     type="button"
                     onClick={() => { setSelectedUser(p); setSearch(p.display_name || p.username || ""); }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between"
                   >
-                    {p.display_name || p.username}
-                    {p.selected_title_id && <span className="ml-2 text-xs text-muted-foreground">(has title)</span>}
+                    <span>{p.display_name || p.username}</span>
+                    {p.selected_title_id ? (
+                      <span className="text-xs text-muted-foreground">has title</span>
+                    ) : (
+                      <span className="text-xs text-green-500">no title</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -296,30 +313,70 @@ export function TitlesManager() {
       </div>
 
       <div className="border rounded-lg p-4">
-        <h3 className="font-semibold mb-3">Users with Titles</h3>
-        <div className="space-y-2">
-          {profiles.filter((p) => p.selected_title_id).map((p) => {
+        <h3 className="font-semibold mb-3 flex items-center gap-2">
+          <Sun className="h-4 w-4" /> Users &amp; Titles
+        </h3>
+        <div className="relative mb-3">
+          <Input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setSelectedUser(null); }}
+            placeholder="Filter users by username or display name..."
+            className="pl-8"
+          />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        </div>
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {profiles
+            .filter((p) => !search || p.display_name?.toLowerCase().includes(search.toLowerCase()) || p.username?.toLowerCase().includes(search.toLowerCase()))
+            .slice(0, 50)
+            .map((p) => {
             const t = titles.find((t) => t.id === p.selected_title_id);
             return (
-                  <div key={p.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                    <div>
-                      <span className="font-medium">{p.display_name || p.username}</span>
-                      {t && (
-                        <span className={`ml-2 text-sm font-bold ${t.style_type === "gradient" && !p.title_color ? "bg-clip-text text-transparent" : ""}`}
-                          style={p.title_color ? { color: p.title_color } : t.style_type !== "gradient" ? titleStyle(t) : titleGradStyle(t)}
-                        >
-                          {t.display_text}
-                        </span>
-                      )}
-                    </div>
-                <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => handleRemoveTitle(p.id)}>
-                  Remove
-                </Button>
+              <div key={p.id} className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold shrink-0">
+                    {(p.display_name || p.username || "?").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
+                    <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
+                  </div>
+                  {t ? (
+                    <span className={`text-sm font-bold ml-2 truncate ${t.style_type === "gradient" && !p.title_color ? "bg-clip-text text-transparent" : ""}`}
+                      style={p.title_color ? { color: p.title_color } : t.style_type !== "gradient" ? titleStyle(t) : titleGradStyle(t)}
+                    >
+                      {t.display_text}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground ml-2">—</span>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Select onValueChange={(v: string | null) => { if (v) quickGrant(p, v); }}>
+                    <SelectTrigger className="h-7 text-xs w-[80px]">
+                      <SelectValue placeholder={t ? "Change" : "Assign"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {titles.map((title) => (
+                        <SelectItem key={title.id} value={title.id}>
+                          <span className={titleClass(title)} style={title.style_type !== "gradient" ? titleStyle(title) : titleGradStyle(title)}>
+                            {title.display_text}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {p.selected_title_id && (
+                    <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => handleRemoveTitle(p.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
-          {profiles.filter((p) => p.selected_title_id).length === 0 && (
-            <p className="text-sm text-muted-foreground">No titles granted yet</p>
+          {profiles.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">No users found</p>
           )}
         </div>
       </div>
