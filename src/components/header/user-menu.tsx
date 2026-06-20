@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { LogOut, User, Flag, HelpCircle, AlertTriangle } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { LogOut, User, Flag, HelpCircle, AlertTriangle, Trophy, BarChart3, Vote, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useUnseenWarnings } from "@/components/warning-alert";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +22,16 @@ export function UserMenu() {
   const { profile, logout } = useAuth();
   const unseenCount = useUnseenWarnings();
   const router = useRouter();
+  const pathname = usePathname();
   const [showReport, setShowReport] = useState(false);
+  const isAdmin = profile?.role === "super_admin";
+
+  const navItems = [
+    { label: "Tournaments", icon: Trophy, href: "/tournaments" },
+    { label: "Leaderboard", icon: BarChart3, href: "/leaderboard" },
+    { label: "Votes", icon: Vote, href: "/votes" },
+    { label: "Support", icon: HelpCircle, href: "/support" },
+  ] as const;
 
   const handleLogout = async () => {
     await logout();
@@ -60,6 +70,25 @@ export function UserMenu() {
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
+          <div className="sm:hidden">
+            {navItems.map(({ label, icon: Icon, href }) => (
+              <DropdownMenuItem key={href} onClick={() => router.push(href)}
+                className={cn(pathname === href || pathname.startsWith(href + "/") ? "bg-muted" : "")}
+              >
+                <Icon className="mr-2 h-4 w-4" />
+                {label}
+              </DropdownMenuItem>
+            ))}
+            {isAdmin && (
+              <>
+                <DropdownMenuItem onClick={() => router.push("/admin")}>
+                  <Shield className="mr-2 h-4 w-4 text-amber-400" />
+                  <span className="text-amber-400">Admin</span>
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuSeparator />
+          </div>
           <DropdownMenuItem onClick={() => router.push("/account")}>
             <User className="mr-2 h-4 w-4" />
             My Account
@@ -67,10 +96,6 @@ export function UserMenu() {
           <DropdownMenuItem onClick={() => setShowReport(true)}>
             <Flag className="mr-2 h-4 w-4" />
             Report
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/support")}>
-            <HelpCircle className="mr-2 h-4 w-4" />
-            Support
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>
