@@ -219,6 +219,34 @@ export type ThunderPointsLog = {
   created_at: string;
 };
 
+export type Report = {
+  id: string;
+  user_id: string;
+  subject: string;
+  description: string;
+  image_url: string | null;
+  status: "pending" | "in_progress" | "resolved" | "dismissed";
+  created_at: string;
+};
+
+export type UserBan = {
+  id: string;
+  user_id: string;
+  reason: string;
+  duration_text: string;
+  expires_at: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type UserWarning = {
+  id: string;
+  user_id: string;
+  reason: string;
+  created_by: string | null;
+  created_at: string;
+};
+
 export type SupportTicket = {
   id: string;
   user_id: string;

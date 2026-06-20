@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown, Megaphone } from "lucide-react";
+import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown, Megaphone, Flag, Ban } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -201,6 +201,42 @@ export default function AdminDashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               Create popup announcements with text, checkboxes, choices, or text answers.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/reports">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5" />
+              Reports
+            </CardTitle>
+            <CardDescription>
+              Review user-submitted reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              View, investigate, and resolve player reports with attached evidence.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/bans">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5" />
+              Bans &amp; Warnings
+            </CardTitle>
+            <CardDescription>
+              Ban users or issue warnings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Temporarily ban users with a reason and duration, or issue warnings for violations.
             </p>
           </CardContent>
         </Card>

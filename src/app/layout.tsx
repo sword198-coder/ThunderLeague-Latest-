@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import { Header } from "@/components/header/header";
 import { AnnouncementModal } from "@/components/announcement-modal";
+import { BanNotice } from "@/components/ban-notice";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({
           <Header />
           <main className="flex-1">{children}</main>
           <AnnouncementModal />
+          <BanNotice />
           <Toaster position="bottom-right" richColors closeButton />
         </AuthProvider>
       </body>
