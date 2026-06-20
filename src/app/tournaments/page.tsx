@@ -240,7 +240,15 @@ export default function TournamentsPage() {
   const allEmpty = active.length === 0 && upcoming.length === 0 && past.length === 0;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
+    <div className="relative min-h-screen">
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[url('/background1.png')] bg-cover bg-center opacity-[0.07]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/60 to-background" />
+        <div className="absolute top-32 left-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-500/5 rounded-full blur-[150px]" />
+      </div>
+      <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8 relative">
       <div>
         <h1 className="text-3xl font-bold">Tournaments</h1>
         <p className="text-muted-foreground mt-1">Browse and join tournaments</p>
@@ -333,6 +341,7 @@ export default function TournamentsPage() {
           onSubmit={(data) => handleSubmitApplication(joinTournament.id, data)}
         />
       )}
+      </div>
     </div>
   );
 }
