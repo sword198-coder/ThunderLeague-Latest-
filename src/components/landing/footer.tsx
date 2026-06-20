@@ -26,9 +26,8 @@ export function Footer() {
   }, []);
 
   return (
-    <footer className="bg-cover bg-center border-t border-border py-12 px-4 relative" style={{ backgroundImage: "url(/background.png)" }}>
-      <div className="absolute inset-0 bg-[rgba(11,14,19,0.7)]" />
-      <div className="container mx-auto relative z-10">
+    <footer className="bg-cover bg-center border-t border-border py-12 px-4" style={{ backgroundImage: "url(/background.png)" }}>
+      <div className="container mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-foreground font-bold text-lg mb-4">
