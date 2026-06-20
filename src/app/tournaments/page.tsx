@@ -242,7 +242,7 @@ export default function TournamentsPage() {
   return (
     <div className="relative min-h-screen">
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[url('/background1.png')] bg-cover bg-center opacity-[0.07]" />
+        <div className="absolute inset-0 bg-[url('/background1.png')] bg-cover bg-center opacity-[0.20]" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/60 to-background" />
         <div className="absolute top-32 left-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]" />
