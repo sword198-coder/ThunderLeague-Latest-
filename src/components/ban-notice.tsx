@@ -41,6 +41,18 @@ export function BanNotice() {
     };
 
     check();
+
+    const channel = supabase
+      .channel(`user-bans-${user.id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "user_bans",
+        filter: `user_id=eq.${user.id}`,
+      }, () => { check(); })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   if (loading || !activeBan) return null;

@@ -93,3 +93,6 @@ DROP POLICY IF EXISTS "Super admins can delete report images" ON storage.objects
 CREATE POLICY "Super admins can delete report images"
   ON storage.objects FOR DELETE
   USING (bucket_id = 'reports' AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.user_warnings;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.user_bans;

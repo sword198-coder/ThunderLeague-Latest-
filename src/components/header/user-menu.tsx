@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, User, Trophy, BarChart3, Flag, HelpCircle } from "lucide-react";
+import { LogOut, User, Flag, HelpCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useWarnings } from "@/components/warning-alert";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ import { ReportDialog } from "@/components/report-dialog";
 
 export function UserMenu() {
   const { profile, logout } = useAuth();
+  const { unseenCount } = useWarnings();
   const router = useRouter();
   const [showReport, setShowReport] = useState(false);
 
@@ -39,6 +41,11 @@ export function UserMenu() {
               <AvatarImage src={profile?.avatar_url ?? undefined} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
+            {unseenCount > 0 && (
+              <div className="absolute -top-0.5 -right-0.5 bg-yellow-500 rounded-full p-0.5 shadow" title={`${unseenCount} warning${unseenCount > 1 ? "s" : ""}`}>
+                <AlertTriangle className="h-3 w-3 text-white" />
+              </div>
+            )}
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end">

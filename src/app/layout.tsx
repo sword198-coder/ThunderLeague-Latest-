@@ -6,6 +6,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { Header } from "@/components/header/header";
 import { AnnouncementModal } from "@/components/announcement-modal";
 import { BanNotice } from "@/components/ban-notice";
+import { WarningProvider } from "@/components/warning-alert";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,11 +28,13 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AuthProvider>
+          <WarningProvider>
           <Header />
           <main className="flex-1">{children}</main>
           <AnnouncementModal />
           <BanNotice />
           <Toaster position="bottom-right" richColors closeButton />
+          </WarningProvider>
         </AuthProvider>
       </body>
     </html>
