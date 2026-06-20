@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, User, Flag, HelpCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useWarnings } from "@/components/warning-alert";
+import { useUnseenWarnings } from "@/components/warning-alert";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,7 @@ import { ReportDialog } from "@/components/report-dialog";
 
 export function UserMenu() {
   const { profile, logout } = useAuth();
-  const { unseenCount } = useWarnings();
+  const unseenCount = useUnseenWarnings();
   const router = useRouter();
   const [showReport, setShowReport] = useState(false);
 
