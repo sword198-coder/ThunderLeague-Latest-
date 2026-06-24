@@ -88,7 +88,15 @@ export function LandingSettingsForm() {
     const ext = file.name.split(".").pop();
     const path = `hero/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from("hero-images").upload(path, file, { upsert: true });
-    if (uploadError) { toast.error("Upload failed"); setUploading(false); return; }
+    if (uploadError) {
+      if (uploadError.message?.includes("bucket") || uploadError.message?.includes("not found")) {
+        toast.error("Storage bucket 'hero-images' does not exist. Create it in Supabase Storage dashboard.");
+      } else {
+        toast.error(`Upload failed: ${uploadError.message}`);
+      }
+      setUploading(false);
+      return;
+    }
     const { data: urlData } = supabase.storage.from("hero-images").getPublicUrl(path);
     if (urlData?.publicUrl) {
       setHeroImages((prev) => [...prev, urlData.publicUrl]);

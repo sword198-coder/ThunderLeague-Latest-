@@ -24,7 +24,7 @@ export function TikTokStrip() {
           rel="noopener noreferrer"
           className="text-black font-bold text-lg hover:underline"
         >
-          متابعه
+          Follow
         </a>
       </div>
       <div className="w-full md:w-2/3 bg-black flex items-center justify-center py-8 px-4">

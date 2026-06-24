@@ -38,7 +38,7 @@ export function Header() {
     </>
   ) : (
     <>
-      {landingLinks.map(({ label, href }) => (
+      {pathname === "/" && landingLinks.map(({ label, href }) => (
         <button
           key={href}
           onClick={() => router.push(href)}

@@ -113,6 +113,12 @@ export function LeaderboardClient({
 
   const top3 = filteredEntries.filter((e) => e.rank <= 3).sort((a, b) => a.rank - b.rank);
 
+  const podiumData = [
+    { rank: 2, color: "bg-gray-300", borderColor: "#94a3b8", height: "h-24", label: "#2 Silver" },
+    { rank: 1, color: "bg-yellow-400", borderColor: "#eab308", height: "h-32", label: "#1 Gold" },
+    { rank: 3, color: "bg-amber-700", borderColor: "#d97706", height: "h-20", label: "#3 Bronze" },
+  ];
+
   return (
     <>
       <div className="flex justify-center gap-1 mb-6 bg-muted rounded-lg p-1">
@@ -129,14 +135,12 @@ export function LeaderboardClient({
         ))}
       </div>
 
-      {top3.length === 3 && (
+      {top3.length > 0 && (
         <div className="mb-8 flex items-end justify-center gap-4 px-4">
-          {[1, 0, 2].map((i) => {
-            const entry = top3[i];
+          {podiumData.map(({ rank, color, borderColor, height, label }) => {
+            const entry = top3.find((e) => e.rank === rank);
+            if (!entry) return <div key={rank} className="w-20" />;
             const profile = findProfile(entry);
-            const colors = ["bg-yellow-400", "bg-gray-300", "bg-amber-700"];
-            const heights = ["h-32", "h-24", "h-20"];
-            const labels = ["#1 Gold", "#2 Silver", "#3 Bronze"];
             return (
               <button
                 key={entry.id}
@@ -145,7 +149,7 @@ export function LeaderboardClient({
               >
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg font-bold border-2 overflow-hidden"
-                    style={{ borderColor: i === 0 ? "#eab308" : i === 1 ? "#94a3b8" : "#d97706" }}
+                    style={{ borderColor }}
                   >
                     {profile?.avatar_url ? (
                       <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -156,10 +160,10 @@ export function LeaderboardClient({
                   <p className="text-sm font-semibold mt-1 truncate max-w-[80px]">{entry.player_name}</p>
                   <p className="text-xs text-muted-foreground">{entry.score.toLocaleString()}</p>
                 </div>
-                <div className={`w-20 ${heights[i]} rounded-t-lg ${colors[i]} flex items-start justify-center pt-2 transition-transform group-hover:scale-105`}>
-                  <Crown className={`h-5 w-5 ${i === 1 ? "text-gray-600" : "text-white"}`} />
+                <div className={`w-20 ${height} rounded-t-lg ${color} flex items-start justify-center pt-2 transition-transform group-hover:scale-105`}>
+                  <Crown className={`h-5 w-5 ${rank === 2 ? "text-gray-600" : "text-white"}`} />
                 </div>
-                <span className="text-[10px] font-semibold text-muted-foreground">{labels[i]}</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
               </button>
             );
           })}
