@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Check, BarChart3, Clock, AlertTriangle, PenLine } from "lucide-react";
+import { Loader2, Check, BarChart3, Clock, AlertTriangle, PenLine, Plus } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,8 @@ import type { Poll, Vote } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -39,6 +41,11 @@ export default function VotesPage() {
   const [voting, setVoting] = useState(false);
   const [confirmPoll, setConfirmPoll] = useState<{ id: string; option: string; text: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [requestTitle, setRequestTitle] = useState("");
+  const [requestDescription, setRequestDescription] = useState("");
+  const [requestOptions, setRequestOptions] = useState("");
+  const [submittingRequest, setSubmittingRequest] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -139,6 +146,32 @@ export default function VotesPage() {
     toast.success("Vote submitted");
   };
 
+  const submitRequest = async () => {
+    if (!requestTitle.trim() || !requestOptions.trim()) {
+      toast.error("Title and at least one option are required");
+      return;
+    }
+    setSubmittingRequest(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSubmittingRequest(false); return; }
+    const { error } = await supabase.from("poll_requests").insert({
+      user_id: user.id,
+      title: requestTitle.trim(),
+      description: requestDescription.trim() || null,
+      options: requestOptions.trim(),
+    });
+    setSubmittingRequest(false);
+    if (error) {
+      toast.error("Failed to submit request");
+      return;
+    }
+    toast.success("Poll request submitted! Admins will review it.");
+    setShowRequestDialog(false);
+    setRequestTitle("");
+    setRequestDescription("");
+    setRequestOptions("");
+  };
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -154,9 +187,15 @@ export default function VotesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Votes</h1>
-        <p className="text-muted-foreground mt-1">Cast your vote on community polls</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Votes</h1>
+          <p className="text-muted-foreground mt-1">Cast your vote on community polls</p>
+        </div>
+        <Button onClick={() => setShowRequestDialog(true)} size="sm" className="gap-1">
+          <Plus className="h-4 w-4" />
+          Request Poll
+        </Button>
       </div>
 
       {activePolls.length === 0 && closedPolls.length === 0 && (
@@ -331,6 +370,41 @@ export default function VotesPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Request a Poll
+            </DialogTitle>
+            <DialogDescription>
+              Submit your poll idea for admin approval
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="req-title">Title *</Label>
+              <Input id="req-title" value={requestTitle} onChange={(e) => setRequestTitle(e.target.value)} placeholder="What is your poll about?" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="req-desc">Description (optional)</Label>
+              <Textarea id="req-desc" value={requestDescription} onChange={(e) => setRequestDescription(e.target.value)} rows={2} placeholder="Explain your poll idea..." />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="req-options">Options * <span className="text-xs text-muted-foreground">(one per line)</span></Label>
+              <Textarea id="req-options" value={requestOptions} onChange={(e) => setRequestOptions(e.target.value)} rows={4} placeholder="Option A&#10;Option B&#10;Option C" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowRequestDialog(false)}>Cancel</Button>
+            <Button onClick={submitRequest} disabled={submittingRequest}>
+              {submittingRequest && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!confirmPoll} onOpenChange={(open) => { if (!open) setConfirmPoll(null); }}>
         <DialogContent>

@@ -8,10 +8,10 @@ export function AuthButtons() {
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="outline" onClick={() => router.push("/auth/login")}>
+      <Button variant="outline" className="w-[100px]" onClick={() => router.push("/auth/login")}>
         Login
       </Button>
-      <Button onClick={() => router.push("/auth/signup")}>Sign Up</Button>
+      <Button className="w-[100px]" onClick={() => router.push("/auth/signup")}>Sign Up</Button>
     </div>
   );
 }

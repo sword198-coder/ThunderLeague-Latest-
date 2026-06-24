@@ -15,7 +15,9 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
   const [messages, setMessages] = useState<(TournamentChatMessage & { name: string; avatar_url: string | null })[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isFirstLoad = useRef(true);
 
   const isAdmin = profile?.role === "super_admin";
   const canSend = !!(user && (isAdmin || isUserApproved));
@@ -47,6 +49,7 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
           };
         })
       );
+      isFirstLoad.current = false;
     };
 
     load();
@@ -65,7 +68,9 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
   }, [tournamentId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isFirstLoad.current && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }, [messages]);
 
   const sendMessage = async () => {
@@ -85,8 +90,8 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
   };
 
   return (
-    <div className="border rounded-xl overflow-hidden max-w-lg mx-auto shadow-sm">
-      <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 border-b">
+    <div className="flex flex-col h-full max-h-[60vh]">
+      <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 border-b shrink-0">
         <div className="p-1.5 rounded-full bg-primary/10">
           <MessageCircle className="h-4 w-4 text-primary" />
         </div>
@@ -94,7 +99,7 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
         <span className="text-[10px] text-muted-foreground ml-auto">{messages.length} messages</span>
       </div>
 
-      <div className="h-72 sm:h-80 overflow-y-auto p-4 space-y-3 bg-muted/10">
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/10" style={{ minHeight: 0 }}>
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
             <MessageCircle className="h-8 w-8 mb-2 opacity-40" />
@@ -130,16 +135,16 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
             </div>
           );
         })}
-        <div ref={bottomRef} />
+        <div ref={messagesEndRef} />
       </div>
 
       {!chatEnabled ? (
-        <div className="p-3 border-t bg-muted/20 text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+        <div className="p-3 border-t bg-muted/20 text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5 shrink-0">
           <Lock className="h-3 w-3" />
           Chat is disabled
         </div>
       ) : canSend ? (
-        <div className="flex gap-2 p-3 border-t bg-card">
+        <div className="flex gap-2 p-3 border-t bg-card shrink-0">
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -152,7 +157,7 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
           </Button>
         </div>
       ) : (
-        <div className="p-3 border-t bg-muted/20 text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+        <div className="p-3 border-t bg-muted/20 text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5 shrink-0">
           <Ban className="h-3 w-3" />
           Only accepted participants can send messages
         </div>

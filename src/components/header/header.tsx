@@ -1,19 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { AuthButtons } from "./auth-buttons";
 import { UserMenu } from "./user-menu";
 import { AdminTab } from "./admin-tab";
 import { NotificationsBell } from "./notifications-bell";
 import { NavTabs } from "./nav-tabs";
+import { cn } from "@/lib/utils";
 
 export function Header() {
   const { user, profile, loading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const isAdmin = profile?.role === "super_admin";
   const isAuthPage = pathname === "/auth/login" || pathname === "/auth/signup";
+
+  const landingLinks = [
+    { label: "About", href: "/about" },
+    { label: "Contacts", href: "/contacts" },
+  ];
 
   const content = loading ? (
     <div className="flex items-center gap-2">
@@ -30,7 +37,23 @@ export function Header() {
       <UserMenu />
     </>
   ) : (
-    <AuthButtons />
+    <>
+      {landingLinks.map(({ label, href }) => (
+        <button
+          key={href}
+          onClick={() => router.push(href)}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors",
+            pathname === href
+              ? "bg-muted text-foreground font-medium"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          {label}
+        </button>
+      ))}
+      <AuthButtons />
+    </>
   );
 
   return (

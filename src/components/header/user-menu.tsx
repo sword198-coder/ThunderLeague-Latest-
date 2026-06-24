@@ -31,6 +31,8 @@ export function UserMenu() {
     { label: "Leaderboard", icon: BarChart3, href: "/leaderboard" },
     { label: "Votes", icon: Vote, href: "/votes" },
     { label: "Support", icon: HelpCircle, href: "/support" },
+    { label: "About", icon: Trophy, href: "/about" },
+    { label: "Contacts", icon: Trophy, href: "/contacts" },
   ] as const;
 
   const handleLogout = async () => {

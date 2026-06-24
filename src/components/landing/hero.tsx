@@ -1,19 +1,82 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function Hero() {
   const { user } = useAuth();
   const router = useRouter();
+  const [images, setImages] = useState<string[]>(["/hero.png"]);
+  const [interval, setIntervalMs] = useState(5000);
+  const [current, setCurrent] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("site_settings").select("key, value").in("key", ["hero_images", "hero_interval"]).then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((s) => (map[s.key] = s.value));
+        if (map.hero_images) {
+          try {
+            const parsed = JSON.parse(map.hero_images);
+            if (Array.isArray(parsed) && parsed.length > 0) setImages(parsed);
+          } catch {}
+        }
+        if (map.hero_interval) {
+          const ms = parseInt(map.hero_interval) * 1000;
+          if (ms > 0) setIntervalMs(ms);
+        }
+      }
+    });
+  }, []);
+
+  const next = useCallback(() => setCurrent((prev) => (prev + 1) % images.length), [images.length]);
+  const prev = useCallback(() => setCurrent((prev) => (prev - 1 + images.length) % images.length), [images.length]);
+
+  useEffect(() => {
+    if (images.length <= 1 || isPaused) return;
+    const id = setInterval(next, interval);
+    return () => clearInterval(id);
+  }, [images.length, interval, isPaused, next]);
 
   return (
     <section
-      className="relative flex items-center justify-center min-h-[70vh] bg-cover bg-center"
-      style={{ backgroundImage: "url(/hero.png)" }}
+      className="relative flex items-center justify-center min-h-[70vh] bg-cover bg-center transition-all duration-700"
+      style={{ backgroundImage: `url(${images[current]})` }}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
     >
       <div className="absolute inset-0 bg-black/60" />
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            className="absolute left-4 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            onClick={next}
+            className="absolute right-4 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+          <div className="absolute bottom-6 z-20 flex gap-2">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                className={`w-3 h-3 rounded-full transition-colors ${i === current ? "bg-white" : "bg-white/40"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
       <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
         <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
           ThunderLeague
@@ -26,14 +89,14 @@ export function Hero() {
           <div className="flex gap-4 justify-center">
             <Button
               size="lg"
-              className="text-base"
+              className="text-base w-[180px]"
               onClick={() => router.push("/auth/signup")}
             >
               Join Tournament
             </Button>
             <Button
               size="lg"
-              className="text-base bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              className="text-base w-[180px] bg-secondary text-secondary-foreground hover:bg-secondary/90"
               onClick={() => router.push("/leaderboard")}
             >
               Leaderboard

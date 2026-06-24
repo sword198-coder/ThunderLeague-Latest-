@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Hero } from "@/components/landing/hero";
 import { NewsTicker } from "@/components/landing/news-ticker";
-import { MarqueeCards } from "@/components/landing/marquee-cards";
-import { Footer } from "@/components/landing/footer";
+import { AnnouncementSection } from "@/components/landing/announcement-section";
+import { YouTubeStrip } from "@/components/landing/youtube-strip";
+import { DiscordStrip } from "@/components/landing/discord-strip";
+import { TikTokStrip } from "@/components/landing/tiktok-strip";
+import { AboutSection } from "@/components/landing/about-section";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -30,8 +33,11 @@ export default function HomePage() {
     <>
       <Hero />
       <NewsTicker />
-      <MarqueeCards />
-      <Footer />
+      <AnnouncementSection />
+      <YouTubeStrip />
+      <DiscordStrip />
+      <TikTokStrip />
+      <AboutSection />
     </>
   );
 }

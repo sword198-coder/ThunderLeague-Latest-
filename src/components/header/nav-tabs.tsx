@@ -13,6 +13,8 @@ export function NavTabs() {
     { label: "Leaderboard", icon: BarChart3, href: "/leaderboard" },
     { label: "Votes", icon: Vote, href: "/votes" },
     { label: "Support", icon: MessageSquareText, href: "/support" },
+    { label: "About", icon: Trophy, href: "/about" },
+    { label: "Contacts", icon: Trophy, href: "/contacts" },
   ];
 
   return (

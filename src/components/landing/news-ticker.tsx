@@ -1,24 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function NewsTicker() {
-  const [newsText, setNewsText] = useState(
-    "Welcome to ThunderLeague — tournaments are now open!"
-  );
+  const [items, setItems] = useState<string[]>(["Welcome to ThunderLeague — tournaments are now open!"]);
+  const [interval, setIntervalMs] = useState(5000);
+  const [current, setCurrent] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "news_text")
-      .single()
-      .then(({ data }) => {
-        if (data) setNewsText(data.value);
-      });
+    supabase.from("site_settings").select("key, value").in("key", ["news_items", "news_interval"]).then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((s) => (map[s.key] = s.value));
+        if (map.news_items) {
+          try {
+            const parsed = JSON.parse(map.news_items);
+            if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
+          } catch {}
+        }
+        if (map.news_interval) {
+          const ms = parseInt(map.news_interval) * 1000;
+          if (ms > 0) setIntervalMs(ms);
+        }
+      }
+    });
   }, []);
+
+  const next = useCallback(() => setCurrent((prev) => (prev + 1) % items.length), [items.length]);
+  const prev = useCallback(() => setCurrent((prev) => (prev - 1 + items.length) % items.length), [items.length]);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const id = setInterval(next, interval);
+    return () => clearInterval(id);
+  }, [items.length, interval, next]);
+
+  if (items.length === 0) return null;
 
   return (
     <div className="w-full bg-muted border-b border-border py-2 px-4 flex items-center gap-3">
@@ -31,7 +51,22 @@ export function NewsTicker() {
           NEWS
         </span>
       </div>
-      <p className="text-foreground text-sm truncate">{newsText}</p>
+      {items.length > 1 && (
+        <button onClick={prev} className="shrink-0 text-muted-foreground hover:text-foreground">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
+      <p className="text-foreground text-sm truncate">{items[current]}</p>
+      {items.length > 1 && (
+        <button onClick={next} className="shrink-0 text-muted-foreground hover:text-foreground">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+      {items.length > 1 && (
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {current + 1}/{items.length}
+        </span>
+      )}
     </div>
   );
 }

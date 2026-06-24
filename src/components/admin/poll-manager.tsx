@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users, Eye, EyeOff } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -59,6 +59,7 @@ export function PollManager() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [editing, setEditing] = useState<Poll | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [pollRequests, setPollRequests] = useState<{ id: string; user_id: string; title: string; description: string | null; options: string; status: string; created_at: string; username: string }[]>([]);
   const [votersDialog, setVotersDialog] = useState<{
     pollTitle: string;
     voters: VoterInfo[];
@@ -84,14 +85,50 @@ export function PollManager() {
     if (data) setPolls(data);
   };
 
+  const loadRequests = async () => {
+    const { data } = await supabase
+      .from("poll_requests")
+      .select("*, profiles!inner(username)")
+      .order("created_at", { ascending: false });
+    if (data) {
+      setPollRequests(data.map((r: Record<string, unknown>) => ({
+        id: r.id as string,
+        user_id: r.user_id as string,
+        title: r.title as string,
+        description: r.description as string | null,
+        options: r.options as string,
+        status: r.status as string,
+        created_at: r.created_at as string,
+        username: (r.profiles as Record<string, unknown>).username as string,
+      })));
+    }
+  };
+
   useEffect(() => {
     loadPolls();
+    loadRequests();
     const channel = supabase
       .channel("admin-polls")
       .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, () => { loadPolls(); })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const reqChannel = supabase
+      .channel("admin-poll-requests")
+      .on("postgres_changes", { event: "*", schema: "public", table: "poll_requests" }, () => { loadRequests(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); supabase.removeChannel(reqChannel); };
   }, []);
+
+  const approveRequest = async (id: string) => {
+    await supabase.from("poll_requests").update({ status: "approved" }).eq("id", id);
+    toast.success("Request approved. You can now create the poll.");
+    loadRequests();
+  };
+
+  const rejectRequest = async (id: string) => {
+    await supabase.from("poll_requests").update({ status: "rejected" }).eq("id", id);
+    toast.success("Request rejected");
+    loadRequests();
+  };
 
   const startCreate = () => {
     setEditing(null);
@@ -312,6 +349,59 @@ export function PollManager() {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {pollRequests.filter(r => r.status === "pending").length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Pending Poll Requests
+            </CardTitle>
+            <CardDescription>Users have requested to create these polls</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Options</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="w-28">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pollRequests.filter(r => r.status === "pending").map((req) => (
+                  <TableRow key={req.id}>
+                    <TableCell className="font-medium">@{req.username}</TableCell>
+                    <TableCell className="max-w-[150px] truncate">{req.title}</TableCell>
+                    <TableCell className="max-w-[150px] truncate text-muted-foreground text-xs">
+                      {req.description || "—"}
+                    </TableCell>
+                    <TableCell className="max-w-[150px] truncate text-xs text-muted-foreground">
+                      {req.options.split("\n").filter(Boolean).join(", ")}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {format(new Date(req.created_at), "MMM d, HH:mm")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => approveRequest(req.id)} className="text-green-500 hover:text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => rejectRequest(req.id)} className="text-destructive hover:text-destructive/80">
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

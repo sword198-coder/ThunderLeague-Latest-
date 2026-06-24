@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Trophy, Swords, BarChart3 } from "lucide-react";
+import { Trophy, Swords, BarChart3, Info, Crown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -111,6 +111,8 @@ export function LeaderboardClient({
     );
   }
 
+  const top3 = filteredEntries.filter((e) => e.rank <= 3).sort((a, b) => a.rank - b.rank);
+
   return (
     <>
       <div className="flex justify-center gap-1 mb-6 bg-muted rounded-lg p-1">
@@ -125,6 +127,55 @@ export function LeaderboardClient({
             {tier.label}
           </Button>
         ))}
+      </div>
+
+      {top3.length === 3 && (
+        <div className="mb-8 flex items-end justify-center gap-4 px-4">
+          {[1, 0, 2].map((i) => {
+            const entry = top3[i];
+            const profile = findProfile(entry);
+            const colors = ["bg-yellow-400", "bg-gray-300", "bg-amber-700"];
+            const heights = ["h-32", "h-24", "h-20"];
+            const labels = ["#1 Gold", "#2 Silver", "#3 Bronze"];
+            return (
+              <button
+                key={entry.id}
+                onClick={() => setSelectedPlayer({ data: entry, profile })}
+                className="flex flex-col items-center gap-2 cursor-pointer group"
+              >
+                <div className="flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg font-bold border-2 overflow-hidden"
+                    style={{ borderColor: i === 0 ? "#eab308" : i === 1 ? "#94a3b8" : "#d97706" }}
+                  >
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{entry.player_name.charAt(0)}</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold mt-1 truncate max-w-[80px]">{entry.player_name}</p>
+                  <p className="text-xs text-muted-foreground">{entry.score.toLocaleString()}</p>
+                </div>
+                <div className={`w-20 ${heights[i]} rounded-t-lg ${colors[i]} flex items-start justify-center pt-2 transition-transform group-hover:scale-105`}>
+                  <Crown className={`h-5 w-5 ${i === 1 ? "text-gray-600" : "text-white"}`} />
+                </div>
+                <span className="text-[10px] font-semibold text-muted-foreground">{labels[i]}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex items-center justify-end mb-2">
+        <span className="group relative inline-block">
+          <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-help">
+            <Info className="h-3.5 w-3.5" />
+            <span>Season Info</span>
+          </button>
+          <span className="absolute bottom-full right-0 mb-2 w-64 p-3 rounded-lg bg-popover border text-xs text-popover-foreground shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+            The leaderboard is reset at the end of each season. Standings are based on performance in ranked tournaments during the current season.
+          </span>
+        </span>
       </div>
 
       <Table>
