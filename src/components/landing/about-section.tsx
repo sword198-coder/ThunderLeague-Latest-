@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export function AboutSection() {
   const [aboutText, setAboutText] = useState(
-    "ThunderLeague is the ultimate War Thunder tournament platform. Compete against the best players, climb the leaderboard, and prove your skills in epic aerial and ground battles."
+    "BPL is the ultimate War Thunder tournament platform. Compete against the best players, climb the leaderboard, and prove your skills in epic aerial and ground battles."
   );
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function AboutSection() {
             <Sparkles className="h-3.5 w-3.5" />
             About
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">About ThunderLeague</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">About BPL</h2>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">{aboutText}</p>
         </div>
 

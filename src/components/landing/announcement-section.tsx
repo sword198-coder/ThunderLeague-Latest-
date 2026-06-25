@@ -34,7 +34,7 @@ export function AnnouncementSection() {
             Official Trailer
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Official Trailer</h2>
-          <p className="text-muted-foreground">Watch the latest ThunderLeague trailer</p>
+          <p className="text-muted-foreground">Watch the latest BPL trailer</p>
         </div>
         <div className="max-w-4xl mx-auto">
           {embedUrl ? (
@@ -44,7 +44,7 @@ export function AnnouncementSection() {
                 className="absolute inset-0 w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
-                title="ThunderLeague Official Trailer"
+                title="BPL Official Trailer"
               />
             </div>
           ) : trailerUrl ? (

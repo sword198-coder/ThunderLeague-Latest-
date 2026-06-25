@@ -33,7 +33,7 @@ export default function ContactPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-3">Contact Us</h1>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Get in touch with the ThunderLeague team. We&apos;re here to help!
+            Get in touch with the BPL team. We&apos;re here to help!
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export default function ContactPage() {
                   Discord Support
                 </Button>
               </a>
-              <a href="mailto:support@thunderleague.com">
+              <a href="mailto:support@bpl.com">
                 <Button variant="outline" className="gap-2">
                   <Mail className="h-4 w-4" />
                   Email Support

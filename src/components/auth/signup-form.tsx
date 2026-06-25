@@ -287,7 +287,7 @@ export function SignUpForm() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Create Account</CardTitle>
-        <CardDescription>Join ThunderLeague and start competing</CardDescription>
+        <CardDescription>Join BPL and start competing</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={signupForm.handleSubmit(onSubmitSignup)} className="space-y-4">

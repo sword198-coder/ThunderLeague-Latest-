@@ -68,7 +68,7 @@ export function BanNotice() {
             <div>
               <DialogTitle className="text-lg">Account Suspended</DialogTitle>
               <DialogDescription>
-                You have been temporarily banned from ThunderLeague
+                You have been temporarily banned from BPL
               </DialogDescription>
             </div>
           </div>

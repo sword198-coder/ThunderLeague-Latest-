@@ -92,7 +92,7 @@ export function Hero() {
       )}
       <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
         <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-          ThunderLeague
+          Battlefront Premier League
         </h1>
         <p className="text-lg md:text-xl text-gray-200 mb-8">
           The ultimate War Thunder tournament platform. Compete, climb the

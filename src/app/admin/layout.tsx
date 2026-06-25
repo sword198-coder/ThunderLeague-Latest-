@@ -8,7 +8,7 @@ export default function AdminLayout({
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your ThunderLeague platform
+          Manage your BPL platform
         </p>
       </div>
       {children}

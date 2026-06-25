@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ThunderLeague - War Thunder Tournament Platform",
+  title: "Battlefront Premier League (BPL)",
   description:
     "The ultimate War Thunder tournament platform. Compete, climb the leaderboard, and prove you're the best pilot.",
 };

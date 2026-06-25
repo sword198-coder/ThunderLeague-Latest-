@@ -31,7 +31,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
           <div className="md:col-span-2">
             <h3 className="text-foreground font-bold text-xl mb-3">
-              <span className="text-primary">Thunder</span>League
+              Battlefront Premier League (BPL)
             </h3>
             <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
               The premier War Thunder tournament platform. Compete, climb the leaderboard, and prove you&apos;re the best pilot.
@@ -78,8 +78,8 @@ export function Footer() {
       <div className="border-t border-border/50 bg-muted/50">
         <div className="container mx-auto px-4 py-4 max-w-5xl mx-auto">
           <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-            &copy; {new Date().getFullYear()} ThunderLeague. All rights reserved.
-            <span className="hidden sm:inline">Made with <Heart className="h-3 w-3 inline text-red-500" /> by the ThunderLeague team</span>
+            &copy; {new Date().getFullYear()} BPL. All rights reserved.
+            <span className="hidden sm:inline">Made with <Heart className="h-3 w-3 inline text-red-500" /> by the BPL team</span>
           </p>
         </div>
       </div>

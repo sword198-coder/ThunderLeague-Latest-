@@ -52,9 +52,9 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground, cardTitle
     : {};
 
   const handleShare = async () => {
-    const text = `Check out ${data.player_name} on ThunderLeague!\nScore: ${data.score.toLocaleString()} | Wins: ${data.wins} | Losses: ${data.losses}`;
+    const text = `Check out ${data.player_name} on BPL!\nScore: ${data.score.toLocaleString()} | Wins: ${data.wins} | Losses: ${data.losses}`;
     if (navigator.share) {
-      await navigator.share({ title: `${data.player_name} - ThunderLeague`, text });
+      await navigator.share({ title: `${data.player_name} - BPL`, text });
     } else {
       await navigator.clipboard.writeText(text);
       setShared(true);

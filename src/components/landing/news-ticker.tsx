@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function NewsTicker() {
-  const [items, setItems] = useState<string[]>(["Welcome to ThunderLeague — tournaments are now open!"]);
+  const [items, setItems] = useState<string[]>(["Welcome to BPL — tournaments are now open!"]);
   const [current, setCurrent] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
   const lenRef = useRef(1);
@@ -19,7 +19,7 @@ export function NewsTicker() {
       const map: Record<string, string> = {};
       data.forEach((s) => (map[s.key] = s.value));
 
-      let arr = ["Welcome to ThunderLeague — tournaments are now open!"];
+      let arr = ["Welcome to BPL — tournaments are now open!"];
       if (map.news_items) {
         try {
           const parsed = JSON.parse(map.news_items);
