@@ -111,12 +111,12 @@ export function LeaderboardClient({
     );
   }
 
-  const top3 = filteredEntries.filter((e) => e.rank <= 3).sort((a, b) => a.rank - b.rank);
+  const top3 = filteredEntries.slice(0, 3);
 
-  const podiumData = [
-    { rank: 2, color: "bg-gray-300", borderColor: "#94a3b8", height: "h-24", label: "#2 Silver" },
-    { rank: 1, color: "bg-yellow-400", borderColor: "#eab308", height: "h-32", label: "#1 Gold" },
-    { rank: 3, color: "bg-amber-700", borderColor: "#d97706", height: "h-20", label: "#3 Bronze" },
+  const podiumSlots = [
+    { idx: 1, color: "bg-gray-300", borderColor: "#94a3b8", height: "h-24", label: "#2" },
+    { idx: 0, color: "bg-yellow-400", borderColor: "#eab308", height: "h-32", label: "#1" },
+    { idx: 2, color: "bg-amber-700", borderColor: "#d97706", height: "h-20", label: "#3" },
   ];
 
   return (
@@ -137,9 +137,9 @@ export function LeaderboardClient({
 
       {top3.length > 0 && (
         <div className="mb-8 flex items-end justify-center gap-4 px-4">
-          {podiumData.map(({ rank, color, borderColor, height, label }) => {
-            const entry = top3.find((e) => e.rank === rank);
-            if (!entry) return <div key={rank} className="w-20" />;
+          {podiumSlots.map(({ idx, color, borderColor, height, label }) => {
+            const entry = top3[idx];
+            if (!entry) return <div key={idx} className="w-20" />;
             const profile = findProfile(entry);
             return (
               <button
@@ -161,7 +161,7 @@ export function LeaderboardClient({
                   <p className="text-xs text-muted-foreground">{entry.score.toLocaleString()}</p>
                 </div>
                 <div className={`w-20 ${height} rounded-t-lg ${color} flex items-start justify-center pt-2 transition-transform group-hover:scale-105`}>
-                  <Crown className={`h-5 w-5 ${rank === 2 ? "text-gray-600" : "text-white"}`} />
+                  <Crown className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
               </button>
