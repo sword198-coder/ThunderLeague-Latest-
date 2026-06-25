@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, MessageCircle } from "lucide-react";
+import { Play, MessageCircle, Globe, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -26,66 +26,61 @@ export function Footer() {
   }, []);
 
   return (
-    <footer className="bg-cover bg-center border-t border-border py-12 px-4 min-h-[60vh] flex items-end" style={{ backgroundImage: "url(/votesbackground.png)" }}>
-      <div className="container mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <h3 className="text-foreground font-bold text-lg mb-4">
+    <footer className="border-t border-border bg-muted/30">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
+          <div className="md:col-span-2">
+            <h3 className="text-foreground font-bold text-xl mb-3">
               <span className="text-primary">Thunder</span>League
             </h3>
-            <p className="text-muted-foreground text-sm">
-              The premier War Thunder tournament platform.
+            <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
+              The premier War Thunder tournament platform. Compete, climb the leaderboard, and prove you&apos;re the best pilot.
             </p>
-          </div>
-          <div>
-            <h4 className="text-foreground font-semibold mb-4">Links</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  About
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Contact
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Terms of Service
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-foreground transition-colors">
-                  Privacy Policy
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-foreground font-semibold mb-4">Follow Us</h4>
-            <div className="flex gap-4">
+            <div className="flex gap-3 mt-4">
               <a
                 href={links.youtube_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-red-500 transition-colors"
+                className="p-2.5 rounded-lg bg-muted border border-border/50 text-muted-foreground hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10 transition-all"
               >
-                <Play className="h-6 w-6" />
+                <Play className="h-4 w-4" />
               </a>
               <a
                 href={links.discord_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-indigo-400 transition-colors"
+                className="p-2.5 rounded-lg bg-muted border border-border/50 text-muted-foreground hover:text-indigo-400 hover:border-indigo-400/30 hover:bg-indigo-500/10 transition-all"
               >
-                <MessageCircle className="h-6 w-6" />
+                <MessageCircle className="h-4 w-4" />
               </a>
             </div>
           </div>
+
+          <div>
+            <h4 className="text-foreground font-semibold text-sm mb-4 uppercase tracking-wider">Quick Links</h4>
+            <ul className="space-y-2.5 text-sm">
+              <li><a href="/tournaments" className="text-muted-foreground hover:text-foreground transition-colors">Tournaments</a></li>
+              <li><a href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">Leaderboard</a></li>
+              <li><a href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">Contact</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-foreground font-semibold text-sm mb-4 uppercase tracking-wider">Legal</h4>
+            <ul className="space-y-2.5 text-sm">
+              <li><span className="text-muted-foreground">Terms of Service</span></li>
+              <li><span className="text-muted-foreground">Privacy Policy</span></li>
+            </ul>
+          </div>
         </div>
-          <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          &copy; 2026 ThunderLeague. All rights reserved.
+      </div>
+
+      <div className="border-t border-border/50 bg-muted/50">
+        <div className="container mx-auto px-4 py-4 max-w-5xl mx-auto">
+          <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+            &copy; {new Date().getFullYear()} ThunderLeague. All rights reserved.
+            <span className="hidden sm:inline">Made with <Heart className="h-3 w-3 inline text-red-500" /> by the ThunderLeague team</span>
+          </p>
         </div>
       </div>
     </footer>

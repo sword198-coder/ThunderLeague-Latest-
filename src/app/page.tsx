@@ -10,6 +10,7 @@ import { YouTubeStrip } from "@/components/landing/youtube-strip";
 import { DiscordStrip } from "@/components/landing/discord-strip";
 import { TikTokStrip } from "@/components/landing/tiktok-strip";
 import { AboutSection } from "@/components/landing/about-section";
+import { Footer } from "@/components/landing/footer";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -38,6 +39,7 @@ export default function HomePage() {
       <DiscordStrip />
       <TikTokStrip />
       <AboutSection />
+      <Footer />
     </>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Save, Upload, Trash2, Plus, Image } from "lucide-react";
+import { Loader2, Save, Upload, Trash2, Plus, Image, Video } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ const schema = z.object({
   news_interval: z.string().min(1, "Required"),
   hero_interval: z.string().min(1, "Required"),
   about_text: z.string().min(1, "Required"),
+  trailer_url: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -34,7 +35,7 @@ export function LandingSettingsForm() {
   const [loading, setLoading] = useState(true);
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [newsItems, setNewsItems] = useState<string[]>([]);
-  const [adCode, setAdCode] = useState("");
+  const [trailerUrl, setTrailerUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [newNewsItem, setNewNewsItem] = useState("");
   const supabase = createClient();
@@ -67,7 +68,7 @@ export function LandingSettingsForm() {
       if (map.news_items) {
         try { setNewsItems(JSON.parse(map.news_items)); } catch { setNewsItems([]); }
       }
-      setAdCode(map.ad_code || "");
+      setTrailerUrl(map.trailer_url || "");
     }
     setLoading(false);
   };
@@ -132,7 +133,7 @@ export function LandingSettingsForm() {
       upsertSetting("about_text", data.about_text),
       upsertSetting("hero_images", JSON.stringify(heroImages)),
       upsertSetting("news_items", JSON.stringify(newsItems)),
-      upsertSetting("ad_code", adCode),
+      upsertSetting("trailer_url", trailerUrl),
     ]);
 
     const hasError = updates.some((r) => r.error);
@@ -238,10 +239,21 @@ export function LandingSettingsForm() {
               {errors.tiktok_url && <p className="text-sm text-destructive">{errors.tiktok_url.message}</p>}
             </div>
 
-            {/* Ad Code */}
+            {/* Trailer URL */}
             <div className="space-y-2">
-              <Label htmlFor="ad_code">Ad Code (HTML)</Label>
-              <Textarea id="ad_code" value={adCode} onChange={(e) => setAdCode(e.target.value)} rows={3} placeholder="Paste ad script or HTML here..." />
+              <Label htmlFor="trailer_url" className="flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                Trailer Video URL
+              </Label>
+              <Input
+                id="trailer_url"
+                value={trailerUrl}
+                onChange={(e) => setTrailerUrl(e.target.value)}
+                placeholder="YouTube URL or direct video URL..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste a YouTube link or direct video URL for the official trailer section
+              </p>
             </div>
 
             {/* About Text */}

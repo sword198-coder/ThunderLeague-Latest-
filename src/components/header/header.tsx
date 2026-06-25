@@ -17,10 +17,13 @@ export function Header() {
   const isAdmin = profile?.role === "super_admin";
   const isAuthPage = pathname === "/auth/login" || pathname === "/auth/signup";
 
-  const landingLinks = [
-    { label: "About", href: "/about" },
-    { label: "Contacts", href: "/contacts" },
-  ];
+  const scrollToAbout = () => {
+    if (pathname !== "/") {
+      router.push("/#about");
+    } else {
+      document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const content = loading ? (
     <div className="flex items-center gap-2">
@@ -38,20 +41,22 @@ export function Header() {
     </>
   ) : (
     <>
-      {pathname === "/" && landingLinks.map(({ label, href }) => (
-        <button
-          key={href}
-          onClick={() => router.push(href)}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors",
-            pathname === href
-              ? "bg-muted text-foreground font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          {label}
-        </button>
-      ))}
+      {pathname === "/" && (
+        <>
+          <button
+            onClick={scrollToAbout}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          >
+            About
+          </button>
+          <button
+            onClick={() => router.push("/contact")}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          >
+            Contacts
+          </button>
+        </>
+      )}
       <AuthButtons />
     </>
   );

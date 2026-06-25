@@ -62,6 +62,7 @@ export default function AccountPage() {
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [selectedBgId, setSelectedBgId] = useState<string | null>(null);
   const [showCardPreview, setShowCardPreview] = useState(false);
+  const [previewBgId, setPreviewBgId] = useState<string | null>(null);
   const [titles, setTitles] = useState<CardTitleType[]>([]);
 
   useEffect(() => {
@@ -512,30 +513,41 @@ export default function AccountPage() {
                         <Zap className="h-3 w-3 text-amber-500" />
                         {bg.price}
                       </p>
-                      {owned ? (
-                        <Button
-                          variant={isSelected ? "default" : "outline"}
-                          size="sm"
-                          className="w-full h-7 text-xs"
-                          onClick={() => selectBackground(bg.id)}
-                        >
-                          {isSelected ? "Selected" : "Equip"}
-                        </Button>
-                      ) : (
+                      <div className="flex gap-1">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full h-7 text-xs"
-                          disabled={(profile?.thunder_points ?? 0) < bg.price || buyingId === bg.id}
-                          onClick={() => buyBackground(bg)}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => { setPreviewBgId(bg.id); setShowCardPreview(true); }}
                         >
-                          {buyingId === bg.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            "Buy"
-                          )}
+                          <Eye className="h-3 w-3 mr-1" />
+                          Preview
                         </Button>
-                      )}
+                        {owned ? (
+                          <Button
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1 h-7 text-xs"
+                            onClick={() => selectBackground(bg.id)}
+                          >
+                            {isSelected ? "Selected" : "Equip"}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 h-7 text-xs"
+                            disabled={(profile?.thunder_points ?? 0) < bg.price || buyingId === bg.id}
+                            onClick={() => buyBackground(bg)}
+                          >
+                            {buyingId === bg.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Buy"
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {!owned && (profile?.thunder_points ?? 0) < bg.price && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -580,8 +592,8 @@ export default function AccountPage() {
       <PlayerCard
         data={profile ? { player_name: profile.display_name || profile.username, wins: 0, losses: 0, score: 0, profile } : null}
         open={showCardPreview}
-        onOpenChange={setShowCardPreview}
-        cardBackground={selectedBackground}
+        onOpenChange={(v) => { setShowCardPreview(v); if (!v) setPreviewBgId(null); }}
+        cardBackground={backgrounds.find((b) => b.id === (previewBgId || selectedBgId))}
         cardTitle={selectedTitle}
       />
     </div>

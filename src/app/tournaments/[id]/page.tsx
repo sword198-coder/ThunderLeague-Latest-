@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass, MessageCircle, X, Play, Music, Monitor, Globe, ArrowRight, Shield, Target, Zap } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass, MessageCircle, X, Play, Music, Monitor, Globe, ArrowRight, Shield, Target, Zap, AlertCircle, Info } from "lucide-react";
+import { format, differenceInHours } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import type { Tournament, TournamentMatch, TournamentParticipant } from "@/lib/types";
@@ -85,6 +85,25 @@ export default function TournamentDetailPage() {
     }
   }, [user, authLoading, router]);
 
+  const updateStatusIfNeeded = async (t: Tournament) => {
+    const now = new Date();
+    const start = new Date(t.start_date);
+    const end = new Date(t.end_date);
+    let newStatus = t.status;
+
+    if (t.status === "upcoming" && now >= start) {
+      newStatus = now >= end ? "completed" : "active";
+    } else if (t.status === "active" && now >= end) {
+      newStatus = "completed";
+    }
+
+    if (newStatus !== t.status) {
+      await supabase.from("tournaments").update({ status: newStatus }).eq("id", id);
+      return { ...t, status: newStatus };
+    }
+    return t;
+  };
+
   useEffect(() => {
     const load = async () => {
       const { data: tData } = await supabase
@@ -93,7 +112,8 @@ export default function TournamentDetailPage() {
         .eq("id", id)
         .maybeSingle();
       if (!tData) { setLoading(false); return; }
-      setTournament(tData);
+      const updated = await updateStatusIfNeeded(tData);
+      setTournament(updated);
 
       const { data: mData } = await supabase
         .from("tournament_matches")
@@ -192,6 +212,12 @@ export default function TournamentDetailPage() {
   const isParticipant = participants.some((p) => p.user_id === user?.id);
   const isApproved = participants.some((p) => p.user_id === user?.id && p.status === "approved");
   const st = STATUS_STYLE[tournament.status] || STATUS_STYLE.upcoming;
+
+  const now = new Date();
+  const startDate = new Date(tournament.start_date);
+  const hoursUntilStart = differenceInHours(startDate, now);
+  const joinDisabled = tournament.status === "upcoming" && hoursUntilStart > 24;
+  const joinOpensIn = joinDisabled ? `${Math.floor(hoursUntilStart - 24)}h` : null;
 
   const statusIcon = (status: string) => {
     switch (status) {
@@ -468,15 +494,29 @@ export default function TournamentDetailPage() {
                   </div>
 
                   {!isParticipant && tournament.status === "upcoming" && (
-                    <Button
-                      size="lg"
-                      className="w-full max-w-xs gap-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/25 transition-all duration-300"
-                      onClick={() => setShowJoin(true)}
-                    >
-                      <Swords className="h-5 w-5" />
-                      Join Tournament
-                      <ArrowRight className="h-4 w-4 ml-auto opacity-70" />
-                    </Button>
+                    <div className="w-full max-w-xs space-y-2">
+                      {joinDisabled && (
+                        <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>Applications open 24 hours before start (opens in ~{joinOpensIn})</span>
+                        </div>
+                      )}
+                      <Button
+                        size="lg"
+                        disabled={joinDisabled}
+                        className={cn(
+                          "w-full gap-2 transition-all duration-300",
+                          joinDisabled
+                            ? "opacity-50 cursor-not-allowed"
+                            : "bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/25"
+                        )}
+                        onClick={() => setShowJoin(true)}
+                      >
+                        <Swords className="h-5 w-5" />
+                        Join Tournament
+                        <ArrowRight className="h-4 w-4 ml-auto opacity-70" />
+                      </Button>
+                    </div>
                   )}
 
                   {isParticipant && !isApproved && (
