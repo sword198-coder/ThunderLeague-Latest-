@@ -227,7 +227,7 @@ export function SignUpForm() {
   }
 
   if (step === "totp") {
-    return <TotpEnroll userId={userId} onComplete={() => { router.push("/"); router.refresh(); }} />;
+    return <TotpEnroll userId={userId} onComplete={() => { window.location.href = "/"; }} />;
   }
 
   if (step === "profile") {

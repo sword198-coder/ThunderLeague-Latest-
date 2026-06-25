@@ -160,6 +160,10 @@ export default function TournamentsPage() {
     return "upcoming";
   }, []);
 
+  const active = useMemo(() => tournaments.filter((t) => getEffectiveStatus(t) === "active"), [tournaments]);
+  const upcoming = useMemo(() => tournaments.filter((t) => getEffectiveStatus(t) === "upcoming"), [tournaments]);
+  const past = useMemo(() => tournaments.filter((t) => { const s = getEffectiveStatus(t); return s === "completed" || s === "cancelled"; }), [tournaments]);
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -167,10 +171,6 @@ export default function TournamentsPage() {
       </div>
     );
   }
-
-  const active = useMemo(() => tournaments.filter((t) => getEffectiveStatus(t) === "active"), [tournaments]);
-  const upcoming = useMemo(() => tournaments.filter((t) => getEffectiveStatus(t) === "upcoming"), [tournaments]);
-  const past = useMemo(() => tournaments.filter((t) => { const s = getEffectiveStatus(t); return s === "completed" || s === "cancelled"; }), [tournaments]);
 
   const renderTournamentCard = (t: Tournament & { _effectiveStatus?: string }) => {
     const es = t._effectiveStatus || getEffectiveStatus(t);

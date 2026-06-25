@@ -76,17 +76,14 @@ export function LoginForm() {
   };
 
   if (step === "enroll") {
-    return <TotpEnroll userId={userId} onComplete={() => { router.push("/"); router.refresh(); }} />;
+    return <TotpEnroll userId={userId} onComplete={() => { window.location.href = "/"; }} />;
   }
 
   if (step === "totp") {
     return (
       <TotpChallenge
         factorId={factorId}
-        onComplete={() => {
-          router.push("/");
-          router.refresh();
-        }}
+        onComplete={() => { window.location.href = "/"; }}
       />
     );
   }
