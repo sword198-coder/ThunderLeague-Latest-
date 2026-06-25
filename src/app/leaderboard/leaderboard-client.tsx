@@ -149,7 +149,7 @@ export function LeaderboardClient({
                 className="flex flex-col items-center gap-2 cursor-pointer group"
               >
                 <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg font-bold border-2 overflow-hidden"
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg font-bold border-2 overflow-hidden relative"
                     style={{ borderColor }}
                   >
                     {profile?.avatar_url ? (
