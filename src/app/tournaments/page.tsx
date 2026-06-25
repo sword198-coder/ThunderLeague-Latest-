@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trophy, Calendar, Swords, Users, Clock, Check, LogIn, Hourglass, X, ExternalLink } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInHours } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -46,6 +46,14 @@ export default function TournamentsPage() {
         .order("start_date", { ascending: true });
 
       if (!tData) { setLoading(false); return; }
+
+      tData.forEach((t) => {
+        const es = getEffectiveStatus(t);
+        if (es !== t.status) {
+          supabase.rpc("auto_update_tournament_status", { tournament_id: t.id });
+        }
+      });
+
       setTournaments(tData);
 
       const { data: pData } = await supabase
@@ -79,12 +87,14 @@ export default function TournamentsPage() {
 
     load();
 
+    const interval = setInterval(() => { load(); }, 60000);
+
     const channel = supabase
       .channel("tournaments-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "tournaments" }, () => { load(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "tournament_participants" }, () => { load(); })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { clearInterval(interval); supabase.removeChannel(channel); };
   }, []);
 
   const handleSubmitApplication = async (tournamentId: string, data: {
@@ -138,6 +148,16 @@ export default function TournamentsPage() {
     toast.success("Application cancelled");
   };
 
+  const getEffectiveStatus = useCallback((t: Tournament) => {
+    if (t.status === "cancelled") return "cancelled";
+    const now = new Date();
+    const start = new Date(t.start_date);
+    const end = new Date(t.end_date);
+    if (now >= end) return "completed";
+    if (now >= start) return "active";
+    return "upcoming";
+  }, []);
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -146,14 +166,19 @@ export default function TournamentsPage() {
     );
   }
 
-  const active = tournaments.filter((t) => t.status === "active");
-  const upcoming = tournaments.filter((t) => t.status === "upcoming");
-  const past = tournaments.filter((t) => t.status === "completed" || t.status === "cancelled");
+  const withEffective = tournaments.map((t) => ({ ...t, _effectiveStatus: getEffectiveStatus(t) }));
+  const active = withEffective.filter((t) => t._effectiveStatus === "active");
+  const upcoming = withEffective.filter((t) => t._effectiveStatus === "upcoming");
+  const past = withEffective.filter((t) => t._effectiveStatus === "completed" || t._effectiveStatus === "cancelled");
 
-  const renderTournamentCard = (t: Tournament) => {
+  const renderTournamentCard = (t: Tournament & { _effectiveStatus?: string }) => {
+    const es = t._effectiveStatus || getEffectiveStatus(t);
     const approved = approvedCounts.get(t.id) ?? 0;
     const myStatus = myParticipation.get(t.id);
     const full = approved >= t.max_players;
+    const hoursUntilStart = differenceInHours(new Date(t.start_date), new Date());
+    const joinLocked = es === "upcoming" && hoursUntilStart > 24;
+    const joinLockHours = Math.floor(hoursUntilStart - 24);
 
     return (
       <Card key={t.id} className={cn("flex flex-col", myStatus && "border-primary/30")}>
@@ -161,9 +186,11 @@ export default function TournamentsPage() {
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-lg">{t.title}</CardTitle>
             <Badge variant="outline" className={cn(
-              t.status === "active" ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+              es === "active" ? "bg-green-500/10 text-green-500 border-green-500/20" :
+              es === "completed" ? "bg-muted text-muted-foreground border-border" :
+              "bg-blue-500/10 text-blue-500 border-blue-500/20"
             )}>
-              {t.status === "active" ? "Active" : "Upcoming"}
+              {es === "active" ? "Active" : es === "completed" ? "Completed" : "Upcoming"}
             </Badge>
           </div>
           {t.description && <CardDescription className="text-xs">{t.description}</CardDescription>}
@@ -221,6 +248,21 @@ export default function TournamentsPage() {
                 <X className="mr-2 h-4 w-4" />
                 Rejected
               </Button>
+            ) : es === "completed" || es === "cancelled" ? (
+              <Button variant="outline" className="w-full" disabled>
+                <Clock className="mr-2 h-4 w-4" />
+                {es === "cancelled" ? "Cancelled" : "Ended"}
+              </Button>
+            ) : es === "upcoming" && joinLocked ? (
+              <div className="space-y-2">
+                <Button className="w-full" disabled>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Opens in ~{joinLockHours}h
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Applications open 24 hours before tournament starts
+                </p>
+              </div>
             ) : (
               <Button
                 className="w-full"
