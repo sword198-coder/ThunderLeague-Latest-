@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Send, Trash2, MessageCircle, Ban, Lock, Flag } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -126,7 +127,9 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
           return (
             <div key={msg.id} className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
               {msg.avatar_url ? (
-                <img src={msg.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 mt-1" />
+                <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-1 relative">
+                  <Image src={msg.avatar_url} alt="" fill className="object-cover" unoptimized />
+                </div>
               ) : (
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1 ${isOwn ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
                   {msg.name.charAt(0).toUpperCase()}

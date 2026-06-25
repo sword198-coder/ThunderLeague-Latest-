@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Loader2, Trophy, Calendar, Swords, Users, Clock, Check, LogIn, Hourglass, X, ExternalLink } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
@@ -39,13 +40,16 @@ export default function TournamentsPage() {
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       const { data: tData } = await supabase
         .from("tournaments")
         .select("*")
         .order("start_date", { ascending: true });
 
-      if (!tData) { setLoading(false); return; }
+      if (!tData) { if (!cancelled) setLoading(false); return; }
+
+      if (!cancelled) setTournaments(tData);
 
       tData.forEach((t) => {
         const es = getEffectiveStatus(t);
@@ -54,13 +58,11 @@ export default function TournamentsPage() {
         }
       });
 
-      setTournaments(tData);
-
       const { data: pData } = await supabase
         .from("tournament_participants")
         .select("tournament_id, status");
 
-      if (pData) {
+      if (pData && !cancelled) {
         const counts = new Map<string, number>();
         pData.forEach((p) => {
           if (p.status === "approved") {
@@ -71,7 +73,7 @@ export default function TournamentsPage() {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user && !cancelled) {
         const { data: myData } = await supabase
           .from("tournament_participants")
           .select("tournament_id, status")
@@ -82,7 +84,7 @@ export default function TournamentsPage() {
         }
       }
 
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
 
     load();
@@ -166,10 +168,9 @@ export default function TournamentsPage() {
     );
   }
 
-  const withEffective = tournaments.map((t) => ({ ...t, _effectiveStatus: getEffectiveStatus(t) }));
-  const active = withEffective.filter((t) => t._effectiveStatus === "active");
-  const upcoming = withEffective.filter((t) => t._effectiveStatus === "upcoming");
-  const past = withEffective.filter((t) => t._effectiveStatus === "completed" || t._effectiveStatus === "cancelled");
+  const active = useMemo(() => tournaments.filter((t) => getEffectiveStatus(t) === "active"), [tournaments]);
+  const upcoming = useMemo(() => tournaments.filter((t) => getEffectiveStatus(t) === "upcoming"), [tournaments]);
+  const past = useMemo(() => tournaments.filter((t) => { const s = getEffectiveStatus(t); return s === "completed" || s === "cancelled"; }), [tournaments]);
 
   const renderTournamentCard = (t: Tournament & { _effectiveStatus?: string }) => {
     const es = t._effectiveStatus || getEffectiveStatus(t);
@@ -283,8 +284,8 @@ export default function TournamentsPage() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[url('/background1.png')] bg-cover bg-center opacity-[0.50]" />
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <Image src="/background1.png" alt="" fill className="object-cover opacity-[0.50]" priority />
         <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/60 to-background" />
         <div className="absolute top-32 left-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]" />

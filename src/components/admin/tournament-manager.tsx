@@ -624,7 +624,7 @@ export function TournamentManager() {
                 </Label>
                 {thumbnailUrl && (
                   <div className="relative rounded-lg overflow-hidden border bg-muted" style={{ aspectRatio: "16/9", maxWidth: 400 }}>
-                    <img src={thumbnailUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                    <img src={thumbnailUrl} alt="Thumbnail preview" className="w-full h-full object-cover" loading="lazy" />
                     <button
                       type="button"
                       onClick={() => setThumbnailUrl(null)}

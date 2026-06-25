@@ -91,7 +91,7 @@ export function ReportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
             </div>
             {preview && (
               <div className="relative mt-2 inline-block">
-                <img src={preview} alt="" className="max-h-40 rounded border object-contain" />
+                <img loading="lazy" src={preview} alt="" className="max-h-40 rounded border object-contain" />
                 <button onClick={() => { setFile(null); setPreview(null); }} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
                   <X className="h-3 w-3" />
                 </button>

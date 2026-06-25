@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Flag, Camera, Globe, MessageCircle, Zap, Copy, Check, Link, ShoppingBag, Eye, Sparkles, Image, Film, Palette } from "lucide-react";
@@ -499,7 +500,7 @@ export default function AccountPage() {
                       {bg.type === "video" ? (
                         <video src={bg.file_url} className="w-full h-full object-cover" muted autoPlay loop playsInline />
                       ) : bg.type === "image" ? (
-                        <img src={bg.file_url} alt="" className="w-full h-full object-cover" />
+                        <NextImage src={bg.file_url} alt="" fill className="object-cover" unoptimized />
                       ) : (
                         <div className="w-full h-full" style={{ backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})` }} />
                       )}

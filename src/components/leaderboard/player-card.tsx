@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users, Image, Film, Crown } from "lucide-react";
+import Image from "next/image";
+import { Share2, Trophy, Zap, Gamepad2, Globe, MessageCircle, Users, Crown } from "lucide-react";
 import type { Profile, CardBackground, CardTitle } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -66,8 +67,8 @@ export function PlayerCard({ data, open, onOpenChange, cardBackground, cardTitle
       <DialogContent className="sm:max-w-sm p-0 overflow-hidden rounded-2xl">
         <div className="relative">
           <div className="aspect-video relative overflow-hidden" style={bgType === "gradient" ? gradStyle : {}}>
-            {bgType === "image" && (
-              <img src={bg!.file_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            {bgType === "image" && bg?.file_url && (
+              <Image src={bg.file_url} alt="" fill className="object-cover" unoptimized />
             )}
             {bgType === "video" && (
               <video src={bg!.file_url} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />

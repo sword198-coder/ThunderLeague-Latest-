@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Image from "next/image";
 import { Trophy, Swords, BarChart3, Info, Crown } from "lucide-react";
 import {
   Table,
@@ -152,7 +153,7 @@ export function LeaderboardClient({
                     style={{ borderColor }}
                   >
                     {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                      <Image src={profile.avatar_url} alt="" fill className="object-cover" unoptimized />
                     ) : (
                       <span>{entry.player_name.charAt(0)}</span>
                     )}

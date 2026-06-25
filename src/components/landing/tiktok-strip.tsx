@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 export function TikTokStrip() {
@@ -16,7 +17,7 @@ export function TikTokStrip() {
   return (
     <div className="w-full flex flex-col md:flex-row">
       <div className="w-full md:w-1/3 bg-white flex flex-col items-center justify-center py-8 px-4">
-        <img src="/Tiktok Logo.jpg" alt="TikTok" className="h-12 w-12 mb-3 object-contain" />
+        <Image src="/Tiktok Logo.jpg" alt="TikTok" width={48} height={48} className="h-12 w-12 mb-3 object-contain" />
         <a
           href={url}
           target="_blank"

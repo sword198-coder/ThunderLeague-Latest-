@@ -239,7 +239,7 @@ export default function SupportPage() {
                 )}
               </div>
               {imagePreview && (
-                <img src={imagePreview} alt="Preview" className="max-h-48 rounded-lg border mt-2" />
+                <img loading="lazy" src={imagePreview} alt="Preview" className="max-h-48 rounded-lg border mt-2" />
               )}
             </div>
             <div className="flex gap-2 justify-end">
@@ -301,7 +301,7 @@ export default function SupportPage() {
                           <p className="whitespace-pre-wrap">{t.message}</p>
                           {t.image_url && (
                             <a href={t.image_url} target="_blank" rel="noopener noreferrer">
-                              <img src={t.image_url} alt="Attachment" className="max-h-48 rounded-lg border mt-2" />
+                              <img loading="lazy" src={t.image_url} alt="Attachment" className="max-h-48 rounded-lg border mt-2" />
                             </a>
                           )}
                         </div>
@@ -324,7 +324,7 @@ export default function SupportPage() {
                               <p className="whitespace-pre-wrap">{r.message}</p>
                               {r.image_url && (
                                 <a href={r.image_url} target="_blank" rel="noopener noreferrer">
-                                  <img src={r.image_url} alt="Attachment" className="max-h-48 rounded-lg border mt-2" />
+                                  <img loading="lazy" src={r.image_url} alt="Attachment" className="max-h-48 rounded-lg border mt-2" />
                                 </a>
                               )}
                             </div>

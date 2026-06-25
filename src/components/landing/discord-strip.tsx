@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 export function DiscordStrip() {
@@ -21,7 +22,7 @@ export function DiscordStrip() {
         </p>
       </div>
       <div className="w-full md:w-1/3 bg-white flex flex-col items-center justify-center py-8 px-4">
-        <img src="/discord logo.jpg" alt="Discord" className="h-12 w-12 mb-3 object-contain" />
+        <Image src="/discord logo.jpg" alt="Discord" width={48} height={48} className="h-12 w-12 mb-3 object-contain" />
         <a
           href={url}
           target="_blank"

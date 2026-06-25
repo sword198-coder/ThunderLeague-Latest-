@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass, MessageCircle, X, Play, Music, Monitor, Globe, ArrowRight, Shield, Target, Zap, AlertCircle, Info } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
@@ -12,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { TournamentChat } from "@/components/tournament-chat";
+import dynamic from "next/dynamic";
+const TournamentChat = dynamic(() => import("@/components/tournament-chat").then((m) => m.TournamentChat), { ssr: false });
 import { JoinDialog } from "@/components/tournaments/join-dialog";
 import type { ReactNode } from "react";
 
@@ -282,13 +284,8 @@ export default function TournamentDetailPage() {
           {/* Thumbnail */}
           <div className="lg:col-span-7">
             {tournament.thumbnail_url ? (
-              <div className="rounded-xl overflow-hidden border border-border/50 bg-muted shadow-lg shadow-black/10">
-                <img
-                  src={tournament.thumbnail_url}
-                  alt={tournament.title}
-                  className="w-full object-cover"
-                  style={{ aspectRatio: "16/9" }}
-                />
+              <div className="rounded-xl overflow-hidden border border-border/50 bg-muted shadow-lg shadow-black/10 relative" style={{ aspectRatio: "16/9" }}>
+                <Image src={tournament.thumbnail_url} alt={tournament.title} fill className="object-cover" unoptimized />
               </div>
             ) : (
               <div className="rounded-xl overflow-hidden border border-border/50 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center shadow-lg shadow-black/10" style={{ aspectRatio: "16/9" }}>
@@ -432,7 +429,9 @@ export default function TournamentDetailPage() {
                       )}
                     >
                       {p.avatar_url ? (
-                        <img src={p.avatar_url} alt={p.name} className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border/50" />
+                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-border/50 relative">
+                          <Image src={p.avatar_url} alt={p.name} fill className="object-cover" unoptimized />
+                        </div>
                       ) : (
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ring-2 ring-border/50",
@@ -624,7 +623,9 @@ export default function TournamentDetailPage() {
                                     m.winner_id === m.player1_id ? "border-green-500/30 bg-green-500/[0.04]" : "border-transparent bg-muted/30"
                                   )}>
                                     {getPlayerInfo(m.player1_id)?.avatar_url ? (
-                                      <img src={getPlayerInfo(m.player1_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border/50" />
+                                      <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-border/50 relative">
+                                        <Image src={getPlayerInfo(m.player1_id)?.avatar_url ?? ""} alt="" fill className="object-cover" unoptimized />
+                                      </div>
                                     ) : (
                                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0 ring-2 ring-border/50">
                                         {getPlayerInfo(m.player1_id)?.name?.charAt(0).toUpperCase() ?? "?"}
@@ -663,7 +664,9 @@ export default function TournamentDetailPage() {
                                     m.winner_id === m.player2_id ? "border-green-500/30 bg-green-500/[0.04]" : "border-transparent bg-muted/30"
                                   )}>
                                     {getPlayerInfo(m.player2_id)?.avatar_url ? (
-                                      <img src={getPlayerInfo(m.player2_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border/50" />
+                                      <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-border/50 relative">
+                                        <Image src={getPlayerInfo(m.player2_id)?.avatar_url ?? ""} alt="" fill className="object-cover" unoptimized />
+                                      </div>
                                     ) : (
                                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0 ring-2 ring-border/50">
                                         {getPlayerInfo(m.player2_id)?.name?.charAt(0).toUpperCase() ?? "?"}
@@ -710,7 +713,9 @@ export default function TournamentDetailPage() {
                                           return (
                                             <div key={pid} className="flex items-start gap-2">
                                               {p?.avatar_url ? (
-                                                <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-border/50" />
+                                                <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 mt-0.5 ring-1 ring-border/50 relative">
+                                                  <Image src={p.avatar_url} alt="" fill className="object-cover" unoptimized />
+                                                </div>
                                               ) : (
                                                 <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0 mt-0.5 ring-1 ring-border/50">
                                                   {p?.name?.charAt(0).toUpperCase() ?? "?"}
@@ -747,7 +752,9 @@ export default function TournamentDetailPage() {
                                           return (
                                             <div key={pid} className="flex items-start gap-2">
                                               {p?.avatar_url ? (
-                                                <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-border/50" />
+                                                <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 mt-0.5 ring-1 ring-border/50 relative">
+                                                  <Image src={p.avatar_url} alt="" fill className="object-cover" unoptimized />
+                                                </div>
                                               ) : (
                                                 <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0 mt-0.5 ring-1 ring-border/50">
                                                   {p?.name?.charAt(0).toUpperCase() ?? "?"}

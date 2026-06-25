@@ -196,7 +196,7 @@ export function BackgroundsManager() {
               {bg.type === "gradient" ? (
                 <div className="w-full h-full" style={{ backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})` }} />
               ) : bg.type === "image" ? (
-                <img src={bg.file_url} alt="" className="w-full h-full object-cover" />
+                <img loading="lazy" src={bg.file_url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <video src={bg.file_url} className="w-full h-full object-cover" muted autoPlay loop playsInline />
               )}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { LeaderboardClient } from "./leaderboard-client";
@@ -34,14 +35,9 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="fixed inset-0 pointer-events-none"
-        style={{
-          backgroundImage: "url(/leaderbackground.png)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <Image src="/leaderbackground.png" alt="" fill className="object-cover" priority />
+      </div>
       <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>

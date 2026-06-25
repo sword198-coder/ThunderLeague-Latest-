@@ -206,7 +206,7 @@ export function LandingSettingsForm() {
               <div className="flex flex-wrap gap-3">
                 {heroImages.map((img, i) => (
                   <div key={i} className="relative w-32 h-20 rounded-lg overflow-hidden border">
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img loading="lazy" src={img} alt="" className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => removeHeroImage(i)}
