@@ -253,10 +253,29 @@ export type SupportTicket = {
   user_id: string;
   subject: string;
   message: string;
+  image_url: string | null;
   status: "open" | "in_progress" | "resolved" | "closed";
   admin_reply: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type TicketReply = {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  message: string;
+  image_url: string | null;
+  created_at: string;
+};
+
+export type ChatReport = {
+  id: string;
+  message_id: string;
+  tournament_id: string;
+  reporter_id: string;
+  reason: string;
+  created_at: string;
 };
 
 export const COUNTRIES = [

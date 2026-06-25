@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Trash2, MessageCircle, Ban, Lock } from "lucide-react";
+import { Send, Trash2, MessageCircle, Ban, Lock, Flag } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import type { TournamentChatMessage } from "@/lib/types";
@@ -89,6 +90,19 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
     await supabase.from("tournament_chat_messages").delete().eq("id", msgId);
   };
 
+  const reportMessage = async (msgId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("chat_reports").insert({
+      message_id: msgId,
+      tournament_id: tournamentId,
+      reporter_id: user.id,
+      reason: "inappropriate",
+    });
+    if (!error) {
+      toast.success("Message reported to admin");
+    }
+  };
+
   return (
     <div className="flex flex-col h-full max-h-[60vh]">
       <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5 border-b shrink-0">
@@ -126,11 +140,18 @@ export function TournamentChat({ tournamentId, isUserApproved, chatEnabled }: { 
                 <div className={`rounded-2xl px-3.5 py-2 text-sm ${isOwn ? "bg-primary text-primary-foreground rounded-tr-sm" : "bg-card border rounded-tl-sm"}`}>
                   <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                 </div>
-                {isAdmin && (
-                  <button onClick={() => deleteMessage(msg.id)} className="text-[10px] text-muted-foreground hover:text-destructive mt-0.5 flex items-center gap-0.5">
-                    <Trash2 className="h-2.5 w-2.5" /> Delete
-                  </button>
-                )}
+                <div className="flex items-center gap-2 mt-0.5">
+                  {user && !isOwn && (
+                    <button onClick={() => reportMessage(msg.id)} className="text-[10px] text-muted-foreground hover:text-amber-500 flex items-center gap-0.5" title="Report this message">
+                      <Flag className="h-2.5 w-2.5" /> Report
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button onClick={() => deleteMessage(msg.id)} className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-0.5">
+                      <Trash2 className="h-2.5 w-2.5" /> Delete
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, BellDot, CheckCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, BellDot, CheckCheck, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -9,12 +10,17 @@ import type { Notification } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 
 export function NotificationsBell() {
   const { profile } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -84,6 +90,16 @@ export function NotificationsBell() {
     setUnreadCount((prev) => Math.max(0, prev - 1));
   };
 
+  const handleNotifClick = (n: Notification) => {
+    markAsRead(n);
+    if (n.link) {
+      setOpen(false);
+      router.push(n.link);
+    } else {
+      setSelectedNotif(n);
+    }
+  };
+
   const markAllAsRead = async () => {
     const unread = notifications.filter((n) => !n.read);
     for (const n of unread) {
@@ -133,25 +149,26 @@ export function NotificationsBell() {
               <div
                 key={n.id}
                 className={cn(
-                  "flex items-start gap-2 p-3 border-b last:border-b-0 transition-colors",
+                  "flex items-start gap-2 p-3 border-b last:border-b-0 transition-colors cursor-pointer hover:bg-muted/50",
                   !n.read && "bg-muted/30"
                 )}
+                onClick={() => handleNotifClick(n)}
               >
-                <button
-                  className="flex-1 text-left min-w-0"
-                  onClick={() => markAsRead(n)}
-                >
+                <div className="flex-1 text-left min-w-0">
                   <p className="font-medium text-sm">{n.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                     {n.message}
                   </p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">
-                    {format(new Date(n.created_at), "MMM d, HH:mm")}
-                  </p>
-                </button>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground/60">
+                      {format(new Date(n.created_at), "MMM d, HH:mm")}
+                    </span>
+                    {n.link && <ExternalLink className="h-3 w-3 text-muted-foreground/40" />}
+                  </div>
+                </div>
                 {!n.read && (
                   <button
-                    onClick={() => markAsRead(n)}
+                    onClick={(e) => { e.stopPropagation(); markAsRead(n); }}
                     className="shrink-0 mt-0.5 h-2 w-2 rounded-full bg-primary hover:opacity-70 transition-opacity"
                     title="Mark as read"
                   />
@@ -161,6 +178,22 @@ export function NotificationsBell() {
           )}
         </div>
       )}
+
+      <Dialog open={!!selectedNotif} onOpenChange={(o) => { if (!o) setSelectedNotif(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedNotif?.title}</DialogTitle>
+            {selectedNotif && (
+              <DialogDescription className="pt-2">
+                <p className="text-sm whitespace-pre-wrap">{selectedNotif.message}</p>
+                <p className="text-xs text-muted-foreground mt-3">
+                  {format(new Date(selectedNotif.created_at), "MMM d, yyyy HH:mm")}
+                </p>
+              </DialogDescription>
+            )}
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { MessageSquareText, Loader2, Send, RefreshCw } from "lucide-react";
+import { MessageSquareText, Loader2, Send, RefreshCw, Paperclip, X, CheckCircle2, Archive } from "lucide-react";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
-import type { SupportTicket } from "@/lib/types";
+import type { SupportTicket, TicketReply } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const STATUS_OPTIONS = [
   { value: "open", label: "Open" },
@@ -32,23 +33,35 @@ const STATUS_MAP: Record<string, string> = {
 };
 
 export function SupportManager() {
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [tickets, setTickets] = useState<(SupportTicket & { replies: TicketReply[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [replying, setReplying] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [replyFile, setReplyFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [profileMap, setProfileMap] = useState<Record<string, { username: string; discord_username: string | null }>>({});
+  const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
   const supabase = createClient();
 
   const loadTickets = useCallback(async () => {
-    const { data } = await supabase
+    const { data: tData } = await supabase
       .from("support_tickets")
       .select("*")
       .order("created_at", { ascending: false });
-    if (data) {
-      setTickets(data);
-      const userIds = [...new Set(data.map((t) => t.user_id))];
+    if (tData) {
+      const ticketsWithReplies = await Promise.all(
+        tData.map(async (t) => {
+          const { data: rData } = await supabase
+            .from("ticket_replies")
+            .select("*")
+            .eq("ticket_id", t.id)
+            .order("created_at", { ascending: true });
+          return { ...t, replies: rData ?? [] };
+        })
+      );
+      setTickets(ticketsWithReplies);
+      const userIds = [...new Set(tData.map((t) => t.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, username, discord_username")
@@ -71,37 +84,80 @@ export function SupportManager() {
     return () => { supabase.removeChannel(channel); };
   }, [loadTickets]);
 
-  const updateTicket = async (id: string, updates: Partial<SupportTicket>) => {
-    setSaving(true);
-    const { error } = await supabase.from("support_tickets").update(updates).eq("id", id);
+  const uploadImage = async (file: File, ticketId: string): Promise<string | null> => {
+    const ext = file.name.split(".").pop();
+    const path = `${ticketId}/admin-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("ticket-images").upload(path, file, { upsert: true });
     if (error) {
+      toast.error("Failed to upload image");
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from("ticket-images").getPublicUrl(path);
+    return urlData?.publicUrl || null;
+  };
+
+  const handleReply = async (ticketId: string) => {
+    if (!replyText.trim() && !replyFile) return;
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    let imageUrl: string | null = null;
+    if (replyFile) {
+      imageUrl = await uploadImage(replyFile, ticketId);
+      if (!imageUrl) { setSaving(false); return; }
+    }
+
+    const { error } = await supabase.from("ticket_replies").insert({
+      ticket_id: ticketId,
+      user_id: user.id,
+      message: replyText.trim() || "(image attachment)",
+      image_url: imageUrl,
+    });
+
+    if (error) {
+      toast.error("Failed to send reply");
       setSaving(false);
-      toast.error("Failed to update ticket");
       return;
     }
-    const ticket = tickets.find((t) => t.id === id);
+
+    const ticket = tickets.find((t) => t.id === ticketId);
     if (ticket) {
-      let title = "Support Ticket Updated";
-      let message = `Your ticket "${ticket.subject}" has been updated.`;
-      if (updates.admin_reply && updates.admin_reply !== ticket.admin_reply) {
-        title = "New Reply on Your Ticket";
-        message = `Admin replied to your ticket "${ticket.subject}".`;
-      } else if (updates.status && updates.status !== ticket.status) {
-        const labels: Record<string, string> = { open: "Open", in_progress: "In Progress", resolved: "Resolved", closed: "Closed" };
-        title = "Ticket Status Changed";
-        message = `Your ticket "${ticket.subject}" status changed to "${labels[updates.status] || updates.status}".`;
-      }
       await supabase.from("notifications").insert({
         user_id: ticket.user_id,
-        title,
-        message,
+        title: `New Reply on Your Ticket`,
+        message: `Admin replied to your ticket "${ticket.subject}".`,
         type: "info",
+        link: `/support`,
       });
     }
+
     setSaving(false);
-    toast.success("Ticket updated");
+    toast.success("Reply sent");
     setReplying(null);
     setReplyText("");
+    setReplyFile(null);
+    loadTickets();
+  };
+
+  const updateStatus = async (ticketId: string, newStatus: string) => {
+    const { error } = await supabase.from("support_tickets").update({ status: newStatus }).eq("id", ticketId);
+    if (error) {
+      toast.error("Failed to update status");
+      return;
+    }
+    const ticket = tickets.find((t) => t.id === ticketId);
+    if (ticket) {
+      const labels: Record<string, string> = { open: "Open", in_progress: "In Progress", resolved: "Resolved", closed: "Closed" };
+      await supabase.from("notifications").insert({
+        user_id: ticket.user_id,
+        title: "Ticket Status Changed",
+        message: `Your ticket "${ticket.subject}" status changed to "${labels[newStatus] || newStatus}".`,
+        type: "info",
+        link: `/support`,
+      });
+    }
+    toast.success("Status updated");
     loadTickets();
   };
 
@@ -151,9 +207,13 @@ export function SupportManager() {
       ) : (
         filtered.map((t) => {
           const profile = profileMap[t.user_id];
+          const isExpanded = expandedTicket === t.id;
           return (
             <Card key={t.id}>
-              <CardHeader className="pb-3">
+              <CardHeader
+                className="pb-3 cursor-pointer"
+                onClick={() => setExpandedTicket(isExpanded ? null : t.id)}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <CardTitle className="text-lg">{t.subject}</CardTitle>
@@ -170,86 +230,139 @@ export function SupportManager() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="bg-muted/30 rounded-lg p-3 text-sm">
-                  <p className="font-medium text-xs text-muted-foreground mb-1">User message:</p>
-                  <p className="whitespace-pre-wrap">{t.message}</p>
-                </div>
-
-                {t.admin_reply && (
-                  <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 text-sm">
-                    <p className="font-medium text-xs text-muted-foreground mb-1">Admin reply:</p>
-                    <p className="whitespace-pre-wrap">{t.admin_reply}</p>
+              {isExpanded && (
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <Avatar className="h-8 w-8 shrink-0 mt-1">
+                        <AvatarFallback className="text-xs bg-primary/10">U</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 max-w-[80%]">
+                        <div className="bg-muted/30 rounded-lg p-3 text-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-xs">@{profile?.username || "User"}</span>
+                            <span className="text-xs text-muted-foreground">{format(new Date(t.created_at), "MMM d, HH:mm")}</span>
+                          </div>
+                          <p className="whitespace-pre-wrap">{t.message}</p>
+                          {t.image_url && (
+                            <a href={t.image_url} target="_blank" rel="noopener noreferrer">
+                              <img src={t.image_url} alt="Attachment" className="max-h-48 rounded-lg border mt-2" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {t.replies.map((r) => {
+                      const isAdminReply = r.user_id !== t.user_id;
+                      return (
+                        <div key={r.id} className={`flex gap-3 ${isAdminReply ? "flex-row-reverse" : ""}`}>
+                          <Avatar className="h-8 w-8 shrink-0 mt-1">
+                            <AvatarFallback className={`text-xs ${isAdminReply ? "bg-primary/10" : ""}`}>
+                              {isAdminReply ? "A" : "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 max-w-[80%]">
+                            <div className={`rounded-lg p-3 text-sm ${isAdminReply ? "bg-primary/5 border border-primary/10" : "bg-muted/30"}`}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-xs">{isAdminReply ? "Admin" : profile?.username || "User"}</span>
+                                <span className="text-xs text-muted-foreground">{format(new Date(r.created_at), "MMM d, HH:mm")}</span>
+                              </div>
+                              <p className="whitespace-pre-wrap">{r.message}</p>
+                              {r.image_url && (
+                                <a href={r.image_url} target="_blank" rel="noopener noreferrer">
+                                  <img src={r.image_url} alt="Attachment" className="max-h-48 rounded-lg border mt-2" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
 
-                {replying === t.id ? (
-                  <div className="space-y-3 border-t pt-3">
-                    <div className="space-y-2">
-                      <Label>Status</Label>
-                      <Select
-                        value={t.status}
-                        onValueChange={(v) => setTickets((prev) => prev.map((x) => x.id === t.id ? { ...x, status: v ?? t.status } as SupportTicket : x))}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUS_OPTIONS.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {replying === t.id ? (
+                    <div className="space-y-3 border-t pt-3">
+                      <div className="flex items-center gap-3">
+                        <Label className="shrink-0">Status:</Label>
+                        <Select value={t.status} onValueChange={(v) => updateStatus(t.id, v ?? t.status)}>
+                          <SelectTrigger className="w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`reply-${t.id}`}>Reply</Label>
+                        <Textarea
+                          id={`reply-${t.id}`}
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          rows={4}
+                          placeholder="Write your reply..."
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => document.getElementById(`admin-img-${t.id}`)?.click()}>
+                          <Paperclip className="h-4 w-4 mr-1" />
+                          Attach Image
+                        </Button>
+                        <input id={`admin-img-${t.id}`} type="file" accept="image/*" className="hidden"
+                          onChange={(e) => setReplyFile(e.target.files?.[0] || null)}
+                        />
+                        {replyFile && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">{replyFile.name}</span>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setReplyFile(null)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={() => { setReplying(null); setReplyText(""); setReplyFile(null); }}>
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => handleReply(t.id)}
+                          disabled={saving || (!replyText.trim() && !replyFile)}
+                        >
+                          {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                          <Send className="h-4 w-4 mr-1" />
+                          Send
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`reply-${t.id}`}>Reply</Label>
-                      <Textarea
-                        id={`reply-${t.id}`}
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        rows={4}
-                        placeholder="Write your reply..."
-                      />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="outline" onClick={() => { setReplying(null); setReplyText(""); }}>
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => updateTicket(t.id, {
-                          status: t.status,
-                          admin_reply: replyText || t.admin_reply,
-                        } as SupportTicket)}
-                        disabled={saving}
-                      >
-                        {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                  ) : (
+                    <div className="flex gap-2 pt-2">
+                      <Button variant="outline" size="sm" onClick={() => { setReplying(t.id); setReplyText(""); setReplyFile(null); }}>
                         <Send className="h-4 w-4 mr-1" />
-                        Save
+                        Reply
                       </Button>
+                      {t.status === "open" && (
+                        <Button variant="outline" size="sm" onClick={() => updateStatus(t.id, "in_progress")}>
+                          Start Progress
+                        </Button>
+                      )}
+                      {t.status !== "resolved" && (
+                        <Button variant="outline" size="sm" onClick={() => updateStatus(t.id, "resolved")}>
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          Resolve
+                        </Button>
+                      )}
+                      {t.status !== "closed" && (
+                        <Button variant="ghost" size="sm" onClick={() => updateStatus(t.id, "closed")}>
+                          <Archive className="h-4 w-4 mr-1" />
+                          Close
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setReplying(t.id); setReplyText(t.admin_reply || ""); }}
-                    >
-                      <Send className="h-4 w-4 mr-1" />
-                      {t.admin_reply ? "Edit Reply" : "Reply"}
-                    </Button>
-                    {t.status !== "closed" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => updateTicket(t.id, { status: "closed" } as SupportTicket)}
-                      >
-                        Close
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
+                  )}
+                </CardContent>
+              )}
             </Card>
           );
         })

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown, Megaphone, Flag, Ban } from "lucide-react";
+import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown, Megaphone, Flag, Ban, MessageCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -219,6 +219,24 @@ export default function AdminDashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               View, investigate, and resolve player reports with attached evidence.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/chat-reports">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Chat Reports
+            </CardTitle>
+            <CardDescription>
+              Dismiss chat message reports from users
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              View and dismiss reported chat messages from tournaments.
             </p>
           </CardContent>
         </Card>

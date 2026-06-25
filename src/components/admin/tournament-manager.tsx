@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell, MessageCircle, Eye, EyeOff, Lock, Unlock, Upload, Image as ImageIcon } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell, MessageCircle, Eye, EyeOff, Lock, Unlock, Upload, Image as ImageIcon, Shuffle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -411,6 +411,58 @@ export function TournamentManager() {
     if (manageTournament) openManage(manageTournament);
   };
 
+  const drawMatches = async () => {
+    if (!manageTournament) return;
+    if (approvedPlayers.length < 2) { toast.error("Need at least 2 approved players"); return; }
+
+    const { data: existing } = await supabase
+      .from("tournament_matches")
+      .select("id")
+      .eq("tournament_id", manageTournament.id);
+    if (existing && existing.length > 0) {
+      toast.error("Delete existing matches first before drawing");
+      return;
+    }
+
+    const shuffled = [...approvedPlayers].sort(() => Math.random() - 0.5);
+    let matchIndex = 0;
+    const inserts: Record<string, unknown>[] = [];
+
+    if (manageTournament.system === "1v1") {
+      for (let i = 0; i < shuffled.length; i += 2) {
+        if (i + 1 >= shuffled.length) break;
+        inserts.push({
+          tournament_id: manageTournament.id,
+          round: 1,
+          match_index: matchIndex++,
+          player1_id: shuffled[i].id,
+          player2_id: shuffled[i + 1].id,
+          status: "pending",
+        });
+      }
+    } else {
+      const mid = Math.ceil(shuffled.length / 2);
+      const team1 = shuffled.slice(0, mid);
+      const team2 = shuffled.slice(mid);
+      if (team1.length === 0 || team2.length === 0) { toast.error("Not enough players for two teams"); return; }
+      inserts.push({
+        tournament_id: manageTournament.id,
+        round: 1,
+        match_index: matchIndex++,
+        team1_player_ids: team1.map((p) => p.id),
+        team2_player_ids: team2.map((p) => p.id),
+        status: "pending",
+      });
+    }
+
+    if (inserts.length === 0) { toast.error("Not enough players to create matches"); return; }
+
+    const { error } = await supabase.from("tournament_matches").insert(inserts);
+    if (error) { toast.error("Failed to create matches"); return; }
+    toast.success(`Created ${inserts.length} match(es) via draw`);
+    if (manageTournament) openManage(manageTournament);
+  };
+
   const updateChatSetting = async (field: "chat_enabled" | "chat_visible", value: boolean) => {
     if (!manageTournament) return;
     const { error } = await supabase.from("tournaments").update({ [field]: value }).eq("id", manageTournament.id);
@@ -699,6 +751,13 @@ export function TournamentManager() {
                 )}
               </div>
             </div>
+
+            {approvedPlayers.length >= 2 && matches.length === 0 && (
+              <Button variant="secondary" size="sm" className="w-full gap-2" onClick={drawMatches}>
+                <Shuffle className="h-4 w-4" />
+                Draw Matches (Auto-pair {approvedPlayers.length} players)
+              </Button>
+            )}
 
             <div className="border rounded-lg p-4 bg-muted/20 space-y-3">
               <h4 className="text-sm font-semibold flex items-center gap-2">
