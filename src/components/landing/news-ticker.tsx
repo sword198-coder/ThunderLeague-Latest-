@@ -1,41 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function NewsTicker() {
   const [items, setItems] = useState<string[]>(["Welcome to ThunderLeague — tournaments are now open!"]);
-  const [ms, setMs] = useState(5000);
   const [current, setCurrent] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(null);
+  const lenRef = useRef(1);
+  const msRef = useRef(5000);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.from("site_settings").select("key, value").in("key", ["news_items", "news_interval"]).then(({ data }) => {
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach((s) => (map[s.key] = s.value));
-        if (map.news_items) {
-          try {
-            const parsed = JSON.parse(map.news_items);
-            if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
-          } catch {}
-        }
-        if (map.news_interval) {
-          const v = parseInt(map.news_interval) * 1000;
-          if (v > 0) setMs(v);
-        }
+      if (!data) return;
+
+      const map: Record<string, string> = {};
+      data.forEach((s) => (map[s.key] = s.value));
+
+      let arr = ["Welcome to ThunderLeague — tournaments are now open!"];
+      if (map.news_items) {
+        try {
+          const parsed = JSON.parse(map.news_items);
+          if (Array.isArray(parsed) && parsed.length > 0) arr = parsed;
+        } catch {}
+      }
+      setItems(arr);
+      lenRef.current = arr.length;
+
+      if (map.news_interval) {
+        const v = parseInt(map.news_interval) * 1000;
+        if (v > 0) msRef.current = v;
+      }
+
+      if (arr.length > 1) {
+        timerRef.current = setInterval(() => setCurrent((prev) => (prev + 1) % lenRef.current), msRef.current);
       }
     });
+
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
   const move = (dir: number) => setCurrent((prev) => (prev + dir + items.length) % items.length);
-
-  useEffect(() => {
-    if (items.length <= 1) return;
-    const id = setInterval(() => setCurrent((prev) => (prev + 1) % items.length), ms);
-    return () => clearInterval(id);
-  }, [items.length, ms]);
 
   if (items.length === 0) return null;
 

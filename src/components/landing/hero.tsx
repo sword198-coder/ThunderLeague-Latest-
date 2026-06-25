@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -11,37 +11,51 @@ export function Hero() {
   const { user } = useAuth();
   const router = useRouter();
   const [images, setImages] = useState<string[]>(["/hero.png"]);
-  const [ms, setMs] = useState(5000);
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const imgLenRef = useRef(1);
+  const msRef = useRef(5000);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(null);
+
+  const startTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (imgLenRef.current > 1 && !isPaused) {
+      timerRef.current = setInterval(() => setCurrent((prev) => (prev + 1) % imgLenRef.current), msRef.current);
+    }
+  };
 
   useEffect(() => {
     const supabase = createClient();
     supabase.from("site_settings").select("key, value").in("key", ["hero_images", "hero_interval"]).then(({ data }) => {
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach((s) => (map[s.key] = s.value));
-        if (map.hero_images) {
-          try {
-            const parsed = JSON.parse(map.hero_images);
-            if (Array.isArray(parsed) && parsed.length > 0) setImages(parsed);
-          } catch {}
-        }
-        if (map.hero_interval) {
-          const v = parseInt(map.hero_interval) * 1000;
-          if (v > 0) setMs(v);
-        }
+      if (!data) return;
+
+      const map: Record<string, string> = {};
+      data.forEach((s) => (map[s.key] = s.value));
+
+      let imgs = ["/hero.png"];
+      if (map.hero_images) {
+        try {
+          const parsed = JSON.parse(map.hero_images);
+          if (Array.isArray(parsed) && parsed.length > 0) imgs = parsed;
+        } catch {}
       }
+      setImages(imgs);
+      imgLenRef.current = imgs.length;
+
+      if (map.hero_interval) {
+        const v = parseInt(map.hero_interval) * 1000;
+        if (v > 0) msRef.current = v;
+      }
+
+      startTimer();
     });
+
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
-  const move = (dir: number) => setCurrent((prev) => (prev + dir + images.length) % images.length);
+  useEffect(() => { startTimer(); }, [isPaused]);
 
-  useEffect(() => {
-    if (images.length <= 1 || isPaused) return;
-    const id = setInterval(() => setCurrent((prev) => (prev + 1) % images.length), ms);
-    return () => clearInterval(id);
-  }, [images.length, ms, isPaused]);
+  const move = (dir: number) => setCurrent((prev) => (prev + dir + images.length) % images.length);
 
   return (
     <section
