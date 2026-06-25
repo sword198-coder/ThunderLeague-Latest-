@@ -86,12 +86,13 @@ export default function TournamentDetailPage() {
   }, [user, authLoading, router]);
 
   const getEffectiveStatus = (t: Tournament) => {
+    if (t.status === "cancelled") return "cancelled";
     const now = new Date();
     const start = new Date(t.start_date);
     const end = new Date(t.end_date);
-    if (t.status === "upcoming" && now >= start) return now >= end ? "completed" : "active";
-    if (t.status === "active" && now >= end) return "completed";
-    return t.status;
+    if (now >= end) return "completed";
+    if (now >= start) return "active";
+    return "upcoming";
   };
 
   useEffect(() => {
@@ -103,16 +104,11 @@ export default function TournamentDetailPage() {
         .maybeSingle();
       if (!tData) { setLoading(false); return; }
 
-      const tryUpdateStatus = async (t: typeof tData) => {
-        const effective = getEffectiveStatus(t);
-        if (effective !== t.status) {
-          await supabase.rpc("auto_update_tournament_status", { tournament_id: id });
-          t.status = effective;
-        }
-        return t;
-      };
-      const updated = await tryUpdateStatus(tData);
-      setTournament(updated);
+      const effective = getEffectiveStatus(tData);
+      if (effective !== tData.status) {
+        supabase.rpc("auto_update_tournament_status", { tournament_id: id });
+      }
+      setTournament(tData);
 
       const { data: mData } = await supabase
         .from("tournament_matches")
@@ -185,8 +181,8 @@ export default function TournamentDetailPage() {
       if (tData) {
         const effective = getEffectiveStatus(tData);
         if (effective !== tData.status) {
-          await supabase.rpc("auto_update_tournament_status", { tournament_id: id });
-          setTournament((prev) => prev ? { ...prev, status: effective } : prev);
+          supabase.rpc("auto_update_tournament_status", { tournament_id: id });
+          setTournament(tData);
         }
       }
     }, 30000);
