@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema, type LoginData } from "@/lib/validations/auth";
@@ -111,6 +111,16 @@ export function LoginForm() {
             {errors.password && (
               <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => router.push("/auth/forgot-password")}
+                className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 cursor-pointer"
+              >
+                <Lock className="h-3 w-3 inline mr-0.5" />
+                Forgot Password?
+              </button>
+            </div>
           </div>
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

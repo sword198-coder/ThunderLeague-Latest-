@@ -136,7 +136,7 @@ export function SignUpForm() {
           last_name: data.last_name,
           display_name: data.display_name,
         },
-        emailRedirectTo: "https://thunder-league-latest.vercel.app",
+        emailRedirectTo: `${window.location.origin}/auth/login`,
       },
     });
 
@@ -177,8 +177,8 @@ export function SignUpForm() {
       .from("profiles")
       .update({
         war_thunder_username: data.war_thunder_username,
-        squadron_name: data.squadron_name || null,
-        discord_username: data.discord_username || null,
+        squadron_name: data.squadron_name,
+        discord_username: data.discord_username,
         nationality: data.nationality,
       })
       .eq("id", userId);
@@ -248,12 +248,18 @@ export function SignUpForm() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="squadron_name">Squadron (optional)</Label>
+              <Label htmlFor="squadron_name">Squadron</Label>
               <Input id="squadron_name" {...profileForm.register("squadron_name")} placeholder="Your squadron name" />
+              {profileForm.formState.errors.squadron_name && (
+                <p className="text-sm text-destructive">{profileForm.formState.errors.squadron_name.message}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="discord_username">Discord Username (optional)</Label>
+              <Label htmlFor="discord_username">Discord Username</Label>
               <Input id="discord_username" {...profileForm.register("discord_username")} placeholder="your_discord#0000" />
+              {profileForm.formState.errors.discord_username && (
+                <p className="text-sm text-destructive">{profileForm.formState.errors.discord_username.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="nationality">Nationality</Label>

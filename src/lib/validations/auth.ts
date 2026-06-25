@@ -31,8 +31,8 @@ export const totpSchema = z.object({
 
 export const profileSchema = z.object({
   war_thunder_username: z.string().min(1, "War Thunder IGN is required"),
-  squadron_name: z.string().optional(),
-  discord_username: z.string().optional(),
+  squadron_name: z.string().min(1, "Squadron is required"),
+  discord_username: z.string().min(1, "Discord username is required"),
   nationality: z.string().min(1, "Nationality is required"),
 });
 
