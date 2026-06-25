@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass, MessageCircle, X } from "lucide-react";
+import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass, MessageCircle, X, Play, Music, Monitor, Globe, ArrowRight, Shield, Target, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -13,12 +13,55 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { TournamentChat } from "@/components/tournament-chat";
-import { TournamentMediaCard } from "@/components/tournament-media-card";
 import { JoinDialog } from "@/components/tournaments/join-dialog";
+import type { ReactNode } from "react";
 
 const MODE_LABELS: Record<string, string> = { air: "Air", ground: "Ground", both: "Air & Ground" };
 const TIER_LABELS: Record<string, string> = { low: "Low Tier", mid: "Mid Tier", high: "High Tier", top: "Top Tier" };
 const ROUND_NAMES = ["", "Quarter-Finals", "Semi-Finals", "Final"];
+
+type MediaLink = { id: string; platform: string; url: string; label: string | null };
+
+const PLATFORM_ICONS: Record<string, ReactNode> = {
+  youtube: <Play className="h-3.5 w-3.5" />,
+  tiktok: <Music className="h-3.5 w-3.5" />,
+  twitch: <Monitor className="h-3.5 w-3.5" />,
+  website: <Globe className="h-3.5 w-3.5" />,
+};
+
+const PLATFORM_COLORS: Record<string, string> = {
+  youtube: "hover:bg-red-500/20 hover:text-red-500 border-red-500/30 text-red-400",
+  tiktok: "hover:bg-pink-500/20 hover:text-pink-500 border-pink-500/30 text-pink-400",
+  twitch: "hover:bg-purple-500/20 hover:text-purple-500 border-purple-500/30 text-purple-400",
+  website: "hover:bg-blue-500/20 hover:text-blue-500 border-blue-500/30 text-blue-400",
+};
+
+const STATUS_STYLE: Record<string, { border: string; bg: string; text: string; dot: string }> = {
+  upcoming: {
+    border: "border-blue-500/30",
+    bg: "bg-blue-500/10",
+    text: "text-blue-400",
+    dot: "bg-blue-500",
+  },
+  active: {
+    border: "border-green-500/30",
+    bg: "bg-green-500/10",
+    text: "text-green-400",
+    dot: "bg-green-500",
+  },
+  completed: {
+    border: "border-muted-foreground/30",
+    bg: "bg-muted",
+    text: "text-muted-foreground",
+    dot: "bg-muted-foreground",
+  },
+  cancelled: {
+    border: "border-red-500/30",
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    dot: "bg-red-500",
+  },
+};
 
 export default function TournamentDetailPage() {
   const { id } = useParams();
@@ -28,13 +71,13 @@ export default function TournamentDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
   const [participants, setParticipants] = useState<(TournamentParticipant & { name: string; username: string; avatar_url: string | null })[]>([]);
+  const [mediaLinks, setMediaLinks] = useState<MediaLink[]>([]);
   const extraProfilesRef = useRef<Map<string, { name: string; username: string; avatar_url: string | null; country: string | null; vehicle: string | null }>>(new Map());
   const nationLabel = (code: string | null) => WT_NATIONS.find((n) => n.code === code)?.label ?? code ?? "";
   const [loading, setLoading] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joining, setJoining] = useState(false);
-  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -103,6 +146,13 @@ export default function TournamentDetailPage() {
       });
       extraProfilesRef.current = extraMap;
 
+      const { data: mediaData } = await supabase
+        .from("tournament_media_links")
+        .select("id, platform, url, label")
+        .eq("tournament_id", id)
+        .eq("visible", true);
+      setMediaLinks(mediaData ?? []);
+
       setLoading(false);
     };
     load();
@@ -115,12 +165,6 @@ export default function TournamentDetailPage() {
 
     return () => { supabase.removeChannel(channel); };
   }, [id]);
-
-  useEffect(() => {
-    if (mainRef.current) {
-      mainRef.current.scrollTop = 0;
-    }
-  }, []);
 
   if (authLoading || loading) {
     return (
@@ -147,6 +191,7 @@ export default function TournamentDetailPage() {
   const approvedCount = participants.filter((p) => p.status === "approved").length;
   const isParticipant = participants.some((p) => p.user_id === user?.id);
   const isApproved = participants.some((p) => p.user_id === user?.id && p.status === "approved");
+  const st = STATUS_STYLE[tournament.status] || STATUS_STYLE.upcoming;
 
   const statusIcon = (status: string) => {
     switch (status) {
@@ -176,162 +221,316 @@ export default function TournamentDetailPage() {
   };
 
   return (
-    <div ref={mainRef} className="min-h-screen">
-      {/* Sticky top panel */}
-      <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="sm" onClick={() => router.push("/tournaments")} className="shrink-0">
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
+    <div className="min-h-screen bg-background">
+      {/* Back button */}
+      <div className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-md">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center h-14 max-w-6xl mx-auto">
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/tournaments")}
+              className="group gap-1.5 text-muted-foreground hover:text-foreground -ml-3"
+            >
+              <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+              <span className="text-sm font-medium">Back to Tournaments</span>
             </Button>
-            <h1 className="text-lg font-bold truncate">{tournament.title}</h1>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className={cn(
-              tournament.status === "active" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-              tournament.status === "upcoming" ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
-              tournament.status === "completed" ? "bg-muted text-muted-foreground" :
-              "bg-red-500/10 text-red-500 border-red-500/20"
-            )}>
-              {tournament.status}
-            </Badge>
-            <Badge variant="outline">
-              {tournament.system === "1v1" ? "1v1" : "4v4"}
-            </Badge>
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              {MODE_LABELS[tournament.mode]} &middot; BR {tournament.battle_rating}
-            </span>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 max-w-5xl space-y-8">
-        {tournament.thumbnail_url && (
-          <div className="rounded-xl overflow-hidden border bg-muted" style={{ aspectRatio: "16/9" }}>
-            <img src={tournament.thumbnail_url} alt={tournament.title} className="w-full h-full object-cover" />
-          </div>
-        )}
-
-        {/* Tournament info + join */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-4">
-            <div>
-              <p className="text-muted-foreground">{tournament.description}</p>
-            </div>
-            <div className="flex flex-wrap gap-3 items-center">
-              {!isParticipant && tournament.status === "upcoming" && (
-                <Button size="lg" onClick={() => setShowJoin(true)}>
-                  Join Tournament
-                </Button>
-              )}
-              {isParticipant && !isApproved && (
-                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 py-2 px-3">
-                  <Hourglass className="h-4 w-4 mr-1" />
-                  Application Pending
-                </Badge>
-              )}
-              {isApproved && (
-                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 py-2 px-3">
-                  <CheckCircle2 className="h-4 w-4 mr-1" />
-                  Approved
-                </Badge>
-              )}
-            </div>
+      <div className="container mx-auto px-4 py-8 max-w-6xl space-y-10">
+        {/* Thumbnail + Info card side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Thumbnail */}
+          <div className="lg:col-span-7">
+            {tournament.thumbnail_url ? (
+              <div className="rounded-xl overflow-hidden border border-border/50 bg-muted shadow-lg shadow-black/10">
+                <img
+                  src={tournament.thumbnail_url}
+                  alt={tournament.title}
+                  className="w-full object-cover"
+                  style={{ aspectRatio: "16/9" }}
+                />
+              </div>
+            ) : (
+              <div className="rounded-xl overflow-hidden border border-border/50 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center shadow-lg shadow-black/10" style={{ aspectRatio: "16/9" }}>
+                <div className="text-center">
+                  <Trophy className="h-16 w-16 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-muted-foreground/40 text-sm font-medium">No thumbnail</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Swords className="h-4 w-4 shrink-0" />
-                {MODE_LABELS[tournament.mode]} &mdash; {TIER_LABELS[tournament.tier]}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-semibold">BR {tournament.battle_rating}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="h-4 w-4 shrink-0" />
-                <span className="text-xs">
-                  {format(new Date(tournament.start_date), "MMM d, HH:mm")} &mdash; {format(new Date(tournament.end_date), "MMM d, HH:mm")}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4 shrink-0" />
-                <span className="text-xs">{approvedCount}/{tournament.max_players} players</span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Info card */}
+          <div className="lg:col-span-5 lg:sticky lg:top-20">
+            <Card className="h-full border-border/50 shadow-lg shadow-black/5">
+              <CardHeader className="pb-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <CardTitle className="text-2xl font-bold leading-tight">{tournament.title}</CardTitle>
+                  <Badge className={cn("shrink-0 capitalize border-0", st.bg, st.text)}>
+                    <span className={cn("w-1.5 h-1.5 rounded-full mr-1.5 inline-block", st.dot)} />
+                    {tournament.status}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="text-xs border-border/50">
+                    <Swords className="h-3 w-3 mr-1" />
+                    {MODE_LABELS[tournament.mode]}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs border-border/50">
+                    {TIER_LABELS[tournament.tier]}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs font-mono border-border/50">
+                    BR {tournament.battle_rating}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs border-border/50",
+                      tournament.system === "1v1" ? "text-blue-400 border-blue-500/30" : "text-purple-400 border-purple-500/30"
+                    )}
+                  >
+                    {tournament.system === "1v1" ? "1v1" : "4v4"}
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border/30">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Start</p>
+                      <p className="text-sm font-medium">{format(new Date(tournament.start_date), "MMM d, HH:mm")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border/30">
+                    <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">End</p>
+                      <p className="text-sm font-medium">{format(new Date(tournament.end_date), "MMM d, HH:mm")}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border/30">
+                  <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Players</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">
+                        <span className={cn(approvedCount === tournament.max_players ? "text-green-400" : "text-foreground")}>
+                          {approvedCount}
+                        </span>
+                        <span className="text-muted-foreground">/{tournament.max_players}</span>
+                      </p>
+                      <div className="flex-1 max-w-[120px] h-1.5 rounded-full bg-muted-foreground/20 overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            approvedCount === tournament.max_players ? "bg-green-500" : "bg-primary/60"
+                          )}
+                          style={{ width: `${(approvedCount / tournament.max_players) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {tournament.description && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+                    <p className="text-sm text-muted-foreground leading-relaxed">{tournament.description}</p>
+                  </div>
+                )}
+
+                {mediaLinks.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-2">Media & Links</p>
+                    <div className="flex flex-wrap gap-2">
+                      {mediaLinks.map((link) => {
+                        const icon = PLATFORM_ICONS[link.platform] || <Globe className="h-3.5 w-3.5" />;
+                        const color = PLATFORM_COLORS[link.platform] || "hover:bg-muted hover:text-foreground";
+                        return (
+                          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs border-border/50", color)}>
+                              {icon}
+                              {link.label || link.platform}
+                            </Button>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <TournamentMediaCard tournamentId={tournament.id} />
-
-        {participants.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Participants ({participants.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {participants.map((p) => (
-                  <div key={p.id} className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border",
-                    p.status === "approved" ? "border-green-500/20 bg-green-500/5" :
-                    p.status === "pending" ? "border-yellow-500/20 bg-yellow-500/5" :
-                    "border-red-500/20 bg-red-500/5"
-                  )}>
-                    {p.avatar_url ? (
-                      <img src={p.avatar_url} alt={p.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                    ) : (
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                        p.status === "approved" ? "bg-green-500/20 text-green-500" :
-                        p.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
-                        "bg-red-500/20 text-red-500"
-                      )}>
-                        {p.name.charAt(0).toUpperCase()}
+        {/* Participants + Motivation side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Participants list */}
+          <div className="lg:col-span-7">
+            <Card className="border-border/50 shadow-lg shadow-black/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  Participants
+                  <span className="text-sm font-normal text-muted-foreground">({participants.length})</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className={cn(participants.length > 0 && "max-h-[500px] overflow-y-auto space-y-2 pr-1")}>
+                {participants.length > 0 ? (
+                  participants.map((p) => (
+                    <div
+                      key={p.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border transition-colors",
+                        p.status === "approved" ? "border-green-500/20 bg-green-500/[0.03] hover:bg-green-500/[0.06]" :
+                        p.status === "pending" ? "border-yellow-500/20 bg-yellow-500/[0.03] hover:bg-yellow-500/[0.06]" :
+                        "border-red-500/20 bg-red-500/[0.03] hover:bg-red-500/[0.06]"
+                      )}
+                    >
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt={p.name} className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border/50" />
+                      ) : (
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ring-2 ring-border/50",
+                          p.status === "approved" ? "bg-green-500/20 text-green-500" :
+                          p.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+                          "bg-red-500/20 text-red-500"
+                        )}>
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{p.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
+                      <Badge variant="outline" className={cn(
+                        "text-xs shrink-0 border-0 font-medium",
+                        p.status === "approved" ? "bg-green-500/10 text-green-500" :
+                        p.status === "pending" ? "bg-yellow-500/10 text-yellow-500" :
+                        "bg-red-500/10 text-red-500"
+                      )}>
+                        <span className="flex items-center gap-1">
+                          {statusIcon(p.status)}
+                          {p.status}
+                        </span>
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className={cn(
-                      "text-xs shrink-0",
-                      p.status === "approved" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                      p.status === "pending" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" :
-                      "bg-red-500/10 text-red-500 border-red-500/20"
-                    )}>
-                      <span className="flex items-center gap-1">
-                        {statusIcon(p.status)}
-                        {p.status}
-                      </span>
-                    </Badge>
+                  ))
+                ) : (
+                  <div className="py-12 text-center">
+                    <Users className="h-12 w-12 mx-auto text-muted-foreground/20 mb-3" />
+                    <p className="text-muted-foreground/60 font-medium">No participants yet</p>
+                    <p className="text-xs text-muted-foreground/40 mt-1">Be the first to join!</p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
+          {/* Motivation + Join */}
+          <div className="lg:col-span-5">
+            <Card className="h-full border-border/50 shadow-lg shadow-black/5 overflow-hidden">
+              <div className="relative bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent h-full">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+                <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-6 min-h-[420px] relative z-10">
+                  <div className="p-4 rounded-full bg-amber-500/20 ring-4 ring-amber-500/10">
+                    <Trophy className="h-10 w-10 text-amber-400" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold">Ready to Compete?</h3>
+                    <p className="text-sm text-muted-foreground/80 max-w-xs mx-auto leading-relaxed">
+                      Join the battle and prove you&apos;re the best pilot. The arena awaits, challenger!
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50 border border-border/30">
+                      <Target className="h-4 w-4 text-amber-400" />
+                      <span className="text-[10px] text-muted-foreground font-medium">Compete</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50 border border-border/30">
+                      <Zap className="h-4 w-4 text-amber-400" />
+                      <span className="text-[10px] text-muted-foreground font-medium">Win</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50 border border-border/30">
+                      <Shield className="h-4 w-4 text-amber-400" />
+                      <span className="text-[10px] text-muted-foreground font-medium">Glory</span>
+                    </div>
+                  </div>
+
+                  {!isParticipant && tournament.status === "upcoming" && (
+                    <Button
+                      size="lg"
+                      className="w-full max-w-xs gap-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/25 transition-all duration-300"
+                      onClick={() => setShowJoin(true)}
+                    >
+                      <Swords className="h-5 w-5" />
+                      Join Tournament
+                      <ArrowRight className="h-4 w-4 ml-auto opacity-70" />
+                    </Button>
+                  )}
+
+                  {isParticipant && !isApproved && (
+                    <div className="w-full max-w-xs p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-center">
+                      <Hourglass className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-yellow-400">Application Pending</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Waiting for organizer approval</p>
+                    </div>
+                  )}
+
+                  {isApproved && (
+                    <div className="w-full max-w-xs p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
+                      <CheckCircle2 className="h-6 w-6 text-green-400 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-green-400">You&apos;re In!</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Good luck in the tournament</p>
+                    </div>
+                  )}
+
+                  {tournament.status !== "upcoming" && !isParticipant && (
+                    <div className="w-full max-w-xs p-4 rounded-xl bg-muted/50 border border-border/30 text-center">
+                      <p className="text-sm text-muted-foreground font-medium capitalize">{tournament.status}</p>
+                      <p className="text-xs text-muted-foreground/60 mt-1">Registration is not open</p>
+                    </div>
+                  )}
+                </CardContent>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Matches section */}
         {matches.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Trophy className="h-5 w-5" />
-              Matches & Bracket
-            </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                <Trophy className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Matches & Bracket</h2>
+                <p className="text-sm text-muted-foreground">{matches.length} match{matches.length !== 1 ? "es" : ""} scheduled</p>
+              </div>
+            </div>
 
             <div className="space-y-8">
               {rounds.map((round) => (
                 <div key={round}>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
-                    {ROUND_NAMES[round] || `Round ${round}`}
-                  </h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                      {ROUND_NAMES[round] || `Round ${round}`}
+                    </span>
+                    <div className="h-px flex-1 bg-border/50" />
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {matches
                       .filter((m) => m.round === round)
@@ -343,23 +542,23 @@ export default function TournamentDetailPage() {
 
                         return (
                           <Card key={m.id} className={cn(
-                            "overflow-hidden",
-                            m.status === "completed" && "border-green-500/30",
-                            m.status === "in_progress" && "border-amber-500/30",
+                            "overflow-hidden border-border/50 shadow-md shadow-black/5 transition-shadow hover:shadow-lg",
+                            m.status === "completed" && "border-green-500/20",
+                            m.status === "in_progress" && "border-amber-500/20",
                           )}>
                             <div className={cn(
-                              "px-4 py-2 flex items-center justify-between border-b",
-                              m.status === "completed" ? "bg-green-500/5" :
-                              m.status === "in_progress" ? "bg-amber-500/5" : "bg-muted/30"
+                              "px-4 py-2.5 flex items-center justify-between border-b border-border/40",
+                              m.status === "completed" ? "bg-green-500/[0.04]" :
+                              m.status === "in_progress" ? "bg-amber-500/[0.04]" : "bg-muted/20"
                             )}>
                               <span className="text-xs font-semibold text-muted-foreground">
                                 Match #{m.match_index + 1}
                               </span>
                               <Badge variant="outline" className={cn(
-                                "text-xs",
-                                m.status === "completed" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                                m.status === "in_progress" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                                "bg-muted text-muted-foreground"
+                                "text-[10px] px-2 py-0 border-0 font-medium",
+                                m.status === "completed" ? "bg-green-500/10 text-green-500" :
+                                m.status === "in_progress" ? "bg-amber-500/10 text-amber-500" :
+                                "bg-muted/50 text-muted-foreground"
                               )}>
                                 {m.status === "in_progress" ? "In Progress" : m.status}
                               </Badge>
@@ -369,13 +568,13 @@ export default function TournamentDetailPage() {
                               {tournament.system === "1v1" ? (
                                 <>
                                   <div className={cn(
-                                    "flex items-center gap-3 p-3 rounded-lg border",
-                                    m.winner_id === m.player1_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                    "flex items-center gap-3 p-3 rounded-lg border transition-colors",
+                                    m.winner_id === m.player1_id ? "border-green-500/30 bg-green-500/[0.04]" : "border-transparent bg-muted/30"
                                   )}>
                                     {getPlayerInfo(m.player1_id)?.avatar_url ? (
-                                      <img src={getPlayerInfo(m.player1_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                                      <img src={getPlayerInfo(m.player1_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border/50" />
                                     ) : (
-                                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
+                                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0 ring-2 ring-border/50">
                                         {getPlayerInfo(m.player1_id)?.name?.charAt(0).toUpperCase() ?? "?"}
                                       </div>
                                     )}
@@ -402,19 +601,19 @@ export default function TournamentDetailPage() {
                                   </div>
 
                                   <div className="flex items-center gap-3">
-                                    <div className="h-px flex-1 bg-border" />
-                                    <span className="text-xs font-semibold text-muted-foreground">VS</span>
-                                    <div className="h-px flex-1 bg-border" />
+                                    <div className="h-px flex-1 bg-border/50" />
+                                    <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">VS</span>
+                                    <div className="h-px flex-1 bg-border/50" />
                                   </div>
 
                                   <div className={cn(
-                                    "flex items-center gap-3 p-3 rounded-lg border",
-                                    m.winner_id === m.player2_id ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                    "flex items-center gap-3 p-3 rounded-lg border transition-colors",
+                                    m.winner_id === m.player2_id ? "border-green-500/30 bg-green-500/[0.04]" : "border-transparent bg-muted/30"
                                   )}>
                                     {getPlayerInfo(m.player2_id)?.avatar_url ? (
-                                      <img src={getPlayerInfo(m.player2_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                                      <img src={getPlayerInfo(m.player2_id)?.avatar_url ?? ""} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border/50" />
                                     ) : (
-                                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0">
+                                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold shrink-0 ring-2 ring-border/50">
                                         {getPlayerInfo(m.player2_id)?.name?.charAt(0).toUpperCase() ?? "?"}
                                       </div>
                                     )}
@@ -443,22 +642,25 @@ export default function TournamentDetailPage() {
                               ) : (
                                 <div className="grid grid-cols-2 gap-3">
                                   <div className={cn(
-                                    "p-3 rounded-lg border",
-                                    m.winner_id && m.team1_player_ids.includes(m.winner_id) ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                    "p-3 rounded-lg border transition-colors",
+                                    m.winner_id && m.team1_player_ids.includes(m.winner_id) ? "border-green-500/30 bg-green-500/[0.04]" : "border-transparent bg-muted/30"
                                   )}>
-                                    <p className="text-xs font-semibold text-muted-foreground mb-2">Team 1</p>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-blue-500/60" />
+                                      Team 1
+                                    </p>
                                     <div className="space-y-1.5">
                                       {m.team1_player_ids.length === 0 ? (
-                                        <p className="text-xs text-muted-foreground">TBD</p>
+                                        <p className="text-xs text-muted-foreground/60">TBD</p>
                                       ) : (
                                         m.team1_player_ids.map((pid) => {
                                           const p = getPlayerInfo(pid);
                                           return (
                                             <div key={pid} className="flex items-start gap-2">
                                               {p?.avatar_url ? (
-                                                <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
+                                                <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-border/50" />
                                               ) : (
-                                                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0 mt-0.5">
+                                                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-500 shrink-0 mt-0.5 ring-1 ring-border/50">
                                                   {p?.name?.charAt(0).toUpperCase() ?? "?"}
                                                 </div>
                                               )}
@@ -477,22 +679,25 @@ export default function TournamentDetailPage() {
                                     </div>
                                   </div>
                                   <div className={cn(
-                                    "p-3 rounded-lg border",
-                                    m.winner_id && m.team2_player_ids.includes(m.winner_id) ? "border-green-500/30 bg-green-500/5" : "border-transparent bg-muted/30"
+                                    "p-3 rounded-lg border transition-colors",
+                                    m.winner_id && m.team2_player_ids.includes(m.winner_id) ? "border-green-500/30 bg-green-500/[0.04]" : "border-transparent bg-muted/30"
                                   )}>
-                                    <p className="text-xs font-semibold text-muted-foreground mb-2">Team 2</p>
+                                    <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-purple-500/60" />
+                                      Team 2
+                                    </p>
                                     <div className="space-y-1.5">
                                       {m.team2_player_ids.length === 0 ? (
-                                        <p className="text-xs text-muted-foreground">TBD</p>
+                                        <p className="text-xs text-muted-foreground/60">TBD</p>
                                       ) : (
                                         m.team2_player_ids.map((pid) => {
                                           const p = getPlayerInfo(pid);
                                           return (
                                             <div key={pid} className="flex items-start gap-2">
                                               {p?.avatar_url ? (
-                                                <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5" />
+                                                <img src={p.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5 ring-1 ring-border/50" />
                                               ) : (
-                                                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0 mt-0.5">
+                                                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-500 shrink-0 mt-0.5 ring-1 ring-border/50">
                                                   {p?.name?.charAt(0).toUpperCase() ?? "?"}
                                                 </div>
                                               )}
@@ -513,7 +718,7 @@ export default function TournamentDetailPage() {
                                 </div>
                               )}
                               {m.scheduled_at && (
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-2 border-t">
+                                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70 pt-3 border-t border-border/30 mt-3">
                                   <Clock className="h-3 w-3" />
                                   {format(new Date(m.scheduled_at), "MMM d, yyyy HH:mm")}
                                 </div>
@@ -530,11 +735,13 @@ export default function TournamentDetailPage() {
         )}
 
         {matches.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No matches have been set up yet</p>
-              <p className="text-xs mt-1">Check back later or contact the tournament organizer</p>
+          <Card className="border-border/50 shadow-lg shadow-black/5">
+            <CardContent className="py-16 text-center">
+              <div className="p-3 rounded-full bg-muted/50 inline-block mb-4">
+                <Trophy className="h-8 w-8 text-muted-foreground/30" />
+              </div>
+              <p className="text-muted-foreground font-medium">No matches have been set up yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1.5">Check back later or contact the tournament organizer</p>
             </CardContent>
           </Card>
         )}
@@ -545,13 +752,13 @@ export default function TournamentDetailPage() {
         <>
           <button
             onClick={() => setShowChat(!showChat)}
-            className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all"
+            className="fixed bottom-6 right-6 z-50 p-3.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 hover:scale-105 transition-all"
           >
-            {showChat ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+            {showChat ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
           </button>
 
           {showChat && (
-            <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 max-h-[60vh] shadow-2xl rounded-xl border bg-background overflow-hidden">
+            <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 max-h-[60vh] shadow-2xl rounded-xl border border-border/50 bg-background overflow-hidden">
               <TournamentChat
                 tournamentId={tournament.id}
                 isUserApproved={isApproved}
