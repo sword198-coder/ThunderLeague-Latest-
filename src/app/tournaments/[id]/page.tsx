@@ -207,6 +207,12 @@ export default function TournamentDetailPage() {
       </div>
 
       <div className="container mx-auto px-4 py-6 max-w-5xl space-y-8">
+        {tournament.thumbnail_url && (
+          <div className="rounded-xl overflow-hidden border bg-muted" style={{ aspectRatio: "16/9" }}>
+            <img src={tournament.thumbnail_url} alt={tournament.title} className="w-full h-full object-cover" />
+          </div>
+        )}
+
         {/* Tournament info + join */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-4">

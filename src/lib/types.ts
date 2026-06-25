@@ -163,6 +163,7 @@ export type Tournament = {
   updated_at: string;
   chat_enabled: boolean;
   chat_visible: boolean;
+  thumbnail_url: string | null;
 };
 
 export type TournamentParticipant = {

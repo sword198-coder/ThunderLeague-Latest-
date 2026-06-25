@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell, MessageCircle, Eye, EyeOff, Lock, Unlock } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell, MessageCircle, Eye, EyeOff, Lock, Unlock, Upload, Image as ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -100,6 +100,8 @@ export function TournamentManager() {
   const [newMediaPlatform, setNewMediaPlatform] = useState("youtube");
   const [newMediaUrl, setNewMediaUrl] = useState("");
   const [newMediaLabel, setNewMediaLabel] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
   const supabase = createClient();
 
   const {
@@ -125,12 +127,14 @@ export function TournamentManager() {
 
   const startCreate = () => {
     setEditing(null);
+    setThumbnailUrl(null);
     reset({ status: "upcoming", mode: "air", tier: "mid", max_players: 16, system: "1v1", description: "", battle_rating: "", chat_enabled: true, chat_visible: true });
     setShowForm(true);
   };
 
   const startEdit = (t: Tournament) => {
     setEditing(t);
+    setThumbnailUrl(t.thumbnail_url);
     setValue("title", t.title);
     setValue("description", t.description ?? "");
     setValue("mode", t.mode);
@@ -152,6 +156,25 @@ export function TournamentManager() {
     reset();
   };
 
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setThumbnailUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `thumbnails/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("tournament-thumbnails").upload(path, file, { upsert: true });
+    if (uploadError) {
+      toast.error(`Upload failed: ${uploadError.message}`);
+      setThumbnailUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("tournament-thumbnails").getPublicUrl(path);
+    if (urlData?.publicUrl) {
+      setThumbnailUrl(urlData.publicUrl);
+    }
+    setThumbnailUploading(false);
+  };
+
   const onSubmit = async (data: FormData) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -169,6 +192,7 @@ export function TournamentManager() {
       status: data.status,
       chat_enabled: data.chat_enabled ?? true,
       chat_visible: data.chat_visible ?? true,
+      thumbnail_url: thumbnailUrl,
     };
 
     if (editing) {
@@ -541,7 +565,32 @@ export function TournamentManager() {
                   </select>
                 </div>
               </div>
-              <div className="flex gap-4 border-t pt-4">
+              <div className="space-y-2 border-t pt-4">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Tournament Panel Image (16:9)
+                </Label>
+                {thumbnailUrl && (
+                  <div className="relative rounded-lg overflow-hidden border bg-muted" style={{ aspectRatio: "16/9", maxWidth: 400 }}>
+                    <img src={thumbnailUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setThumbnailUrl(null)}
+                      className="absolute top-2 right-2 p-1 bg-destructive/80 text-white rounded-full hover:bg-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+                <Label className="cursor-pointer inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                  <Upload className="h-4 w-4" />
+                  {thumbnailUrl ? "Change Image" : "Upload Image"}
+                  <input type="file" accept="image/*" onChange={handleThumbnailUpload} className="hidden" disabled={thumbnailUploading} />
+                </Label>
+                {thumbnailUploading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+              </div>
+
+              <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" {...register("chat_enabled")} defaultChecked />
                   <span className="text-sm">Chat Enabled</span>
