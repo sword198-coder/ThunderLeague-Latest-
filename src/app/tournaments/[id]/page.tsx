@@ -102,16 +102,17 @@ export default function TournamentDetailPage() {
         .eq("id", id)
         .maybeSingle();
       if (!tData) { setLoading(false); return; }
-      setTournament(tData);
 
-      const tryUpdateStatus = async () => {
-        const effective = getEffectiveStatus(tData);
-        if (effective !== tData.status) {
-          await supabase.from("tournaments").update({ status: effective }).eq("id", id);
-          setTournament((prev) => prev ? { ...prev, status: effective } : prev);
+      const tryUpdateStatus = async (t: typeof tData) => {
+        const effective = getEffectiveStatus(t);
+        if (effective !== t.status) {
+          await supabase.rpc("auto_update_tournament_status", { tournament_id: id });
+          t.status = effective;
         }
+        return t;
       };
-      tryUpdateStatus();
+      const updated = await tryUpdateStatus(tData);
+      setTournament(updated);
 
       const { data: mData } = await supabase
         .from("tournament_matches")
@@ -184,7 +185,7 @@ export default function TournamentDetailPage() {
       if (tData) {
         const effective = getEffectiveStatus(tData);
         if (effective !== tData.status) {
-          await supabase.from("tournaments").update({ status: effective }).eq("id", id);
+          await supabase.rpc("auto_update_tournament_status", { tournament_id: id });
           setTournament((prev) => prev ? { ...prev, status: effective } : prev);
         }
       }

@@ -134,14 +134,18 @@ export function LandingSettingsForm() {
     }
     setUploadingTrailer(true);
     const ext = file.name.split(".").pop();
-    const path = `trailer/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("hero-images").upload(path, file, { upsert: true });
+    const path = `${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("trailer-videos").upload(path, file, { upsert: true });
     if (uploadError) {
-      toast.error(`Upload failed: ${uploadError.message}`);
+      if (uploadError.message?.includes("bucket") || uploadError.message?.includes("not found")) {
+        toast.error("Storage bucket 'trailer-videos' does not exist. Run migration 0036 in Supabase SQL Editor.");
+      } else {
+        toast.error(`Upload failed: ${uploadError.message}`);
+      }
       setUploadingTrailer(false);
       return;
     }
-    const { data: urlData } = supabase.storage.from("hero-images").getPublicUrl(path);
+    const { data: urlData } = supabase.storage.from("trailer-videos").getPublicUrl(path);
     if (urlData?.publicUrl) {
       setTrailerUrl(urlData.publicUrl);
       toast.success("Trailer video uploaded!");
