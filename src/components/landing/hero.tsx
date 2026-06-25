@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -11,7 +11,7 @@ export function Hero() {
   const { user } = useAuth();
   const router = useRouter();
   const [images, setImages] = useState<string[]>(["/hero.png"]);
-  const [interval, setIntervalMs] = useState(5000);
+  const [ms, setMs] = useState(5000);
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -28,23 +28,20 @@ export function Hero() {
           } catch {}
         }
         if (map.hero_interval) {
-          const ms = parseInt(map.hero_interval) * 1000;
-          if (ms > 0) setIntervalMs(ms);
+          const v = parseInt(map.hero_interval) * 1000;
+          if (v > 0) setMs(v);
         }
       }
     });
   }, []);
 
-  const next = useCallback(() => setCurrent((prev) => (prev + 1) % images.length), [images.length]);
-  const prev = useCallback(() => setCurrent((prev) => (prev - 1 + images.length) % images.length), [images.length]);
-  const nextRef = useRef(next);
-  nextRef.current = next;
+  const move = (dir: number) => setCurrent((prev) => (prev + dir + images.length) % images.length);
 
   useEffect(() => {
     if (images.length <= 1 || isPaused) return;
-    const id = setInterval(() => nextRef.current(), interval);
+    const id = setInterval(() => setCurrent((prev) => (prev + 1) % images.length), ms);
     return () => clearInterval(id);
-  }, [images.length, interval, isPaused]);
+  }, [images.length, ms, isPaused]);
 
   return (
     <section
@@ -57,13 +54,13 @@ export function Hero() {
       {images.length > 1 && (
         <>
           <button
-            onClick={prev}
+            onClick={() => move(-1)}
             className="absolute left-4 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <button
-            onClick={next}
+            onClick={() => move(1)}
             className="absolute right-4 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
           >
             <ChevronRight className="h-6 w-6" />

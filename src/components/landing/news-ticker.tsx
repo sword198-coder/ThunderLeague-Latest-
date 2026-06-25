@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function NewsTicker() {
   const [items, setItems] = useState<string[]>(["Welcome to ThunderLeague — tournaments are now open!"]);
-  const [interval, setIntervalMs] = useState(5000);
+  const [ms, setMs] = useState(5000);
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
@@ -22,23 +22,20 @@ export function NewsTicker() {
           } catch {}
         }
         if (map.news_interval) {
-          const ms = parseInt(map.news_interval) * 1000;
-          if (ms > 0) setIntervalMs(ms);
+          const v = parseInt(map.news_interval) * 1000;
+          if (v > 0) setMs(v);
         }
       }
     });
   }, []);
 
-  const next = useCallback(() => setCurrent((prev) => (prev + 1) % items.length), [items.length]);
-  const prev = useCallback(() => setCurrent((prev) => (prev - 1 + items.length) % items.length), [items.length]);
-  const nextRef = useRef(next);
-  nextRef.current = next;
+  const move = (dir: number) => setCurrent((prev) => (prev + dir + items.length) % items.length);
 
   useEffect(() => {
     if (items.length <= 1) return;
-    const id = setInterval(() => nextRef.current(), interval);
+    const id = setInterval(() => setCurrent((prev) => (prev + 1) % items.length), ms);
     return () => clearInterval(id);
-  }, [items.length, interval]);
+  }, [items.length, ms]);
 
   if (items.length === 0) return null;
 
@@ -54,13 +51,13 @@ export function NewsTicker() {
         </span>
       </div>
       {items.length > 1 && (
-        <button onClick={prev} className="shrink-0 text-muted-foreground hover:text-foreground">
+        <button onClick={() => move(-1)} className="shrink-0 text-muted-foreground hover:text-foreground">
           <ChevronLeft className="h-4 w-4" />
         </button>
       )}
       <p className="text-foreground text-sm truncate">{items[current]}</p>
       {items.length > 1 && (
-        <button onClick={next} className="shrink-0 text-muted-foreground hover:text-foreground">
+        <button onClick={() => move(1)} className="shrink-0 text-muted-foreground hover:text-foreground">
           <ChevronRight className="h-4 w-4" />
         </button>
       )}
