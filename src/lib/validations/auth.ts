@@ -29,6 +29,14 @@ export const totpSchema = z.object({
     .regex(/^\d{6}$/, "Code must be 6 digits"),
 });
 
+export const profileSchema = z.object({
+  war_thunder_username: z.string().min(1, "War Thunder IGN is required"),
+  squadron_name: z.string().optional(),
+  discord_username: z.string().optional(),
+  nationality: z.string().min(1, "Nationality is required"),
+});
+
 export type SignUpData = z.infer<typeof signUpSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
 export type TotpData = z.infer<typeof totpSchema>;
+export type ProfileData = z.infer<typeof profileSchema>;

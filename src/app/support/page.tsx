@@ -39,6 +39,7 @@ export default function SupportPage() {
     const { data } = await supabase
       .from("support_tickets")
       .select("*")
+      .eq("user_id", user!.id)
       .order("created_at", { ascending: false });
     if (data) setTickets(data);
     setLoading(false);
