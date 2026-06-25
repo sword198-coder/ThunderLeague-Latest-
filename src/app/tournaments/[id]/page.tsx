@@ -85,23 +85,13 @@ export default function TournamentDetailPage() {
     }
   }, [user, authLoading, router]);
 
-  const updateStatusIfNeeded = async (t: Tournament) => {
+  const getEffectiveStatus = (t: Tournament) => {
     const now = new Date();
     const start = new Date(t.start_date);
     const end = new Date(t.end_date);
-    let newStatus = t.status;
-
-    if (t.status === "upcoming" && now >= start) {
-      newStatus = now >= end ? "completed" : "active";
-    } else if (t.status === "active" && now >= end) {
-      newStatus = "completed";
-    }
-
-    if (newStatus !== t.status) {
-      await supabase.from("tournaments").update({ status: newStatus }).eq("id", id);
-      return { ...t, status: newStatus };
-    }
-    return t;
+    if (t.status === "upcoming" && now >= start) return now >= end ? "completed" : "active";
+    if (t.status === "active" && now >= end) return "completed";
+    return t.status;
   };
 
   useEffect(() => {
@@ -112,8 +102,16 @@ export default function TournamentDetailPage() {
         .eq("id", id)
         .maybeSingle();
       if (!tData) { setLoading(false); return; }
-      const updated = await updateStatusIfNeeded(tData);
-      setTournament(updated);
+      setTournament(tData);
+
+      const tryUpdateStatus = async () => {
+        const effective = getEffectiveStatus(tData);
+        if (effective !== tData.status) {
+          await supabase.from("tournaments").update({ status: effective }).eq("id", id);
+          setTournament((prev) => prev ? { ...prev, status: effective } : prev);
+        }
+      };
+      tryUpdateStatus();
 
       const { data: mData } = await supabase
         .from("tournament_matches")
@@ -177,13 +175,28 @@ export default function TournamentDetailPage() {
     };
     load();
 
+    const interval = setInterval(async () => {
+      const { data: tData } = await supabase
+        .from("tournaments")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (tData) {
+        const effective = getEffectiveStatus(tData);
+        if (effective !== tData.status) {
+          await supabase.from("tournaments").update({ status: effective }).eq("id", id);
+          setTournament((prev) => prev ? { ...prev, status: effective } : prev);
+        }
+      }
+    }, 30000);
+
     const channel = supabase
       .channel(`tournament-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "tournament_matches", filter: `tournament_id=eq.${id}` }, () => { load(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "tournament_participants", filter: `tournament_id=eq.${id}` }, () => { load(); })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { clearInterval(interval); supabase.removeChannel(channel); };
   }, [id]);
 
   if (authLoading || loading) {
@@ -211,13 +224,15 @@ export default function TournamentDetailPage() {
   const approvedCount = participants.filter((p) => p.status === "approved").length;
   const isParticipant = participants.some((p) => p.user_id === user?.id);
   const isApproved = participants.some((p) => p.user_id === user?.id && p.status === "approved");
-  const st = STATUS_STYLE[tournament.status] || STATUS_STYLE.upcoming;
+  const effectiveStatus = getEffectiveStatus(tournament);
+  const st = STATUS_STYLE[effectiveStatus] || STATUS_STYLE.upcoming;
 
   const now = new Date();
   const startDate = new Date(tournament.start_date);
   const hoursUntilStart = differenceInHours(startDate, now);
-  const joinDisabled = tournament.status === "upcoming" && hoursUntilStart > 24;
-  const joinOpensIn = joinDisabled ? `${Math.floor(hoursUntilStart - 24)}h` : null;
+  const isUpcoming = effectiveStatus === "upcoming";
+  const joinLocked = isUpcoming && hoursUntilStart > 24;
+  const joinLockHours = Math.floor(hoursUntilStart - 24);
 
   const statusIcon = (status: string) => {
     switch (status) {
@@ -296,7 +311,7 @@ export default function TournamentDetailPage() {
                   <CardTitle className="text-2xl font-bold leading-tight">{tournament.title}</CardTitle>
                   <Badge className={cn("shrink-0 capitalize border-0", st.bg, st.text)}>
                     <span className={cn("w-1.5 h-1.5 rounded-full mr-1.5 inline-block", st.dot)} />
-                    {tournament.status}
+                    {effectiveStatus}
                   </Badge>
                 </div>
 
@@ -493,20 +508,20 @@ export default function TournamentDetailPage() {
                     </div>
                   </div>
 
-                  {!isParticipant && tournament.status === "upcoming" && (
+                  {!isParticipant && isUpcoming && (
                     <div className="w-full max-w-xs space-y-2">
-                      {joinDisabled && (
+                      {joinLocked && (
                         <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
                           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>Applications open 24 hours before start (opens in ~{joinOpensIn})</span>
+                          <span>Applications open 24 hours before tournament starts (opens in ~{joinLockHours}h)</span>
                         </div>
                       )}
                       <Button
                         size="lg"
-                        disabled={joinDisabled}
+                        disabled={joinLocked}
                         className={cn(
                           "w-full gap-2 transition-all duration-300",
-                          joinDisabled
+                          joinLocked
                             ? "opacity-50 cursor-not-allowed"
                             : "bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-500/25"
                         )}
@@ -535,9 +550,9 @@ export default function TournamentDetailPage() {
                     </div>
                   )}
 
-                  {tournament.status !== "upcoming" && !isParticipant && (
+                  {!isUpcoming && !isParticipant && (
                     <div className="w-full max-w-xs p-4 rounded-xl bg-muted/50 border border-border/30 text-center">
-                      <p className="text-sm text-muted-foreground font-medium capitalize">{tournament.status}</p>
+                      <p className="text-sm text-muted-foreground font-medium capitalize">{effectiveStatus}</p>
                       <p className="text-xs text-muted-foreground/60 mt-1">Registration is not open</p>
                     </div>
                   )}

@@ -37,6 +37,7 @@ export function LandingSettingsForm() {
   const [newsItems, setNewsItems] = useState<string[]>([]);
   const [trailerUrl, setTrailerUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadingTrailer, setUploadingTrailer] = useState(false);
   const [newNewsItem, setNewNewsItem] = useState("");
   const supabase = createClient();
 
@@ -119,6 +120,36 @@ export function LandingSettingsForm() {
   const removeNewsItem = (index: number) => {
     setNewsItems((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const handleTrailerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      toast.error("Please select a video file");
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("File too large. Max 100MB.");
+      return;
+    }
+    setUploadingTrailer(true);
+    const ext = file.name.split(".").pop();
+    const path = `trailer/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("hero-images").upload(path, file, { upsert: true });
+    if (uploadError) {
+      toast.error(`Upload failed: ${uploadError.message}`);
+      setUploadingTrailer(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("hero-images").getPublicUrl(path);
+    if (urlData?.publicUrl) {
+      setTrailerUrl(urlData.publicUrl);
+      toast.success("Trailer video uploaded!");
+    }
+    setUploadingTrailer(false);
+  };
+
+  const removeTrailer = () => setTrailerUrl("");
 
   const upsertSetting = (key: string, value: string) =>
     supabase.from("site_settings").upsert({ key, value }, { onConflict: "key" });
@@ -239,20 +270,44 @@ export function LandingSettingsForm() {
               {errors.tiktok_url && <p className="text-sm text-destructive">{errors.tiktok_url.message}</p>}
             </div>
 
-            {/* Trailer URL */}
-            <div className="space-y-2">
-              <Label htmlFor="trailer_url" className="flex items-center gap-2">
+            {/* Trailer Video */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
                 <Video className="h-4 w-4" />
-                Trailer Video URL
+                Trailer Video
               </Label>
-              <Input
-                id="trailer_url"
-                value={trailerUrl}
-                onChange={(e) => setTrailerUrl(e.target.value)}
-                placeholder="YouTube URL or direct video URL..."
-              />
+              {trailerUrl ? (
+                <div className="relative rounded-lg overflow-hidden border border-border/50 bg-black" style={{ aspectRatio: "16/9" }}>
+                  <video src={trailerUrl} className="w-full h-full object-contain" controls playsInline />
+                  <button
+                    type="button"
+                    onClick={removeTrailer}
+                    className="absolute top-2 right-2 p-1.5 bg-destructive/80 text-white rounded-full hover:bg-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center border-2 border-dashed border-border/50 rounded-lg p-8 text-center" style={{ aspectRatio: "16/9" }}>
+                  <div>
+                    <Video className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No trailer uploaded</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <Label className="cursor-pointer flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                  <Upload className="h-4 w-4" />
+                  Upload Video
+                  <input type="file" accept="video/*" onChange={handleTrailerUpload} className="hidden" disabled={uploadingTrailer} />
+                </Label>
+                {uploadingTrailer && <Loader2 className="h-4 w-4 animate-spin" />}
+                {trailerUrl && (
+                  <span className="text-xs text-muted-foreground">Video uploaded</span>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Paste a YouTube link or direct video URL for the official trailer section
+                Upload a video file (max 100MB). Supported formats: MP4, WebM, etc.
               </p>
             </div>
 
