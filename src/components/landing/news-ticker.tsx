@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -31,12 +31,14 @@ export function NewsTicker() {
 
   const next = useCallback(() => setCurrent((prev) => (prev + 1) % items.length), [items.length]);
   const prev = useCallback(() => setCurrent((prev) => (prev - 1 + items.length) % items.length), [items.length]);
+  const nextRef = useRef(next);
+  nextRef.current = next;
 
   useEffect(() => {
     if (items.length <= 1) return;
-    const id = setInterval(next, interval);
+    const id = setInterval(() => nextRef.current(), interval);
     return () => clearInterval(id);
-  }, [items.length, interval, next]);
+  }, [items.length, interval]);
 
   if (items.length === 0) return null;
 

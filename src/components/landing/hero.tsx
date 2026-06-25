@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -37,12 +37,14 @@ export function Hero() {
 
   const next = useCallback(() => setCurrent((prev) => (prev + 1) % images.length), [images.length]);
   const prev = useCallback(() => setCurrent((prev) => (prev - 1 + images.length) % images.length), [images.length]);
+  const nextRef = useRef(next);
+  nextRef.current = next;
 
   useEffect(() => {
     if (images.length <= 1 || isPaused) return;
-    const id = setInterval(next, interval);
+    const id = setInterval(() => nextRef.current(), interval);
     return () => clearInterval(id);
-  }, [images.length, interval, isPaused, next]);
+  }, [images.length, interval, isPaused]);
 
   return (
     <section
