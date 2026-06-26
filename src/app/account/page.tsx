@@ -504,6 +504,11 @@ export default function AccountPage() {
                       ) : (
                         <div className="w-full h-full" style={{ backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})` }} />
                       )}
+                      {!owned && (profile?.thunder_points ?? 0) < bg.price && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="text-xs text-white font-medium px-2 py-1 rounded bg-black/60">Too expensive</span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-2 space-y-1">
                       <p className="text-xs font-semibold truncate flex items-center gap-1">
@@ -514,21 +519,21 @@ export default function AccountPage() {
                         <Zap className="h-3 w-3 text-amber-500" />
                         {bg.price}
                       </p>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1.5">
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
-                          className="flex-1 h-7 text-xs"
+                          className="flex-1 h-8 text-xs"
                           onClick={() => { setPreviewBgId(bg.id); setShowCardPreview(true); }}
                         >
-                          <Eye className="h-3 w-3 mr-1" />
+                          <Eye className="h-3.5 w-3.5 mr-1" />
                           Preview
                         </Button>
                         {owned ? (
                           <Button
                             variant={isSelected ? "default" : "outline"}
                             size="sm"
-                            className="flex-1 h-7 text-xs"
+                            className={isSelected ? "flex-1 h-8 text-xs" : "flex-1 h-8 text-xs border-primary/40 hover:bg-primary/10"}
                             onClick={() => selectBackground(bg.id)}
                           >
                             {isSelected ? "Selected" : "Equip"}
@@ -537,12 +542,17 @@ export default function AccountPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex-1 h-7 text-xs"
+                            className="flex-1 h-8 text-xs"
                             disabled={(profile?.thunder_points ?? 0) < bg.price || buyingId === bg.id}
                             onClick={() => buyBackground(bg)}
                           >
                             {buyingId === bg.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (profile?.thunder_points ?? 0) < bg.price ? (
+                              <>
+                                <Zap className="h-3 w-3 mr-1 text-amber-500" />
+                                Buy
+                              </>
                             ) : (
                               "Buy"
                             )}
@@ -550,11 +560,6 @@ export default function AccountPage() {
                         )}
                       </div>
                     </div>
-                    {!owned && (profile?.thunder_points ?? 0) < bg.price && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="text-xs text-white font-medium">Too expensive</span>
-                      </div>
-                    )}
                   </div>
                 );
               })}

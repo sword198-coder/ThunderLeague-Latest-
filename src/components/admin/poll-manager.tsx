@@ -86,10 +86,14 @@ export function PollManager() {
   };
 
   const loadRequests = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("poll_requests")
-      .select("*, profiles!inner(username)")
+      .select("*, profiles(username)")
       .order("created_at", { ascending: false });
+    if (error) {
+      console.error("Failed to load poll requests", error);
+      return;
+    }
     if (data) {
       setPollRequests(data.map((r: Record<string, unknown>) => ({
         id: r.id as string,
@@ -99,7 +103,7 @@ export function PollManager() {
         options: r.options as string,
         status: r.status as string,
         created_at: r.created_at as string,
-        username: (r.profiles as Record<string, unknown>).username as string,
+        username: ((r.profiles as Record<string, unknown> | null)?.username as string) ?? "Unknown",
       })));
     }
   };
