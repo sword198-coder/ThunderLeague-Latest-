@@ -281,6 +281,38 @@ export type ChatReport = {
   created_at: string;
 };
 
+export type Post = {
+  id: string;
+  user_id: string;
+  text: string;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PostLike = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type PostComment = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+  profile?: Profile;
+};
+
+export type Follow = {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+};
+
 export const COUNTRIES = [
   { code: "AF", label: "Afghanistan" },
   { code: "AL", label: "Albania" },
