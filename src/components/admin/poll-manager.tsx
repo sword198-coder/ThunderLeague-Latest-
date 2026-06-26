@@ -129,9 +129,27 @@ export function PollManager() {
   }, []);
 
   const approveRequest = async (id: string) => {
+    const { data: req } = await supabase.from("poll_requests").select("*").eq("id", id).single();
+    if (!req) { toast.error("Request not found"); return; }
+    const options = req.options.split("\n").map((s: string) => s.trim()).filter(Boolean);
+    const now = new Date();
+    const endsAt = new Date(now.getTime() + 7 * 86400000);
+    const { error: pollError } = await supabase.from("polls").insert({
+      title: req.title,
+      description: req.description ? `📢 Player Poll: ${req.description}` : "📢 Player Poll",
+      options,
+      allow_text_response: false,
+      starts_at: now.toISOString(),
+      ends_at: endsAt.toISOString(),
+      status: "active",
+      hidden: false,
+      created_by: req.user_id,
+    });
+    if (pollError) { toast.error("Failed to create poll: " + pollError.message); return; }
     await supabase.from("poll_requests").update({ status: "approved" }).eq("id", id);
-    toast.success("Request approved. You can now create the poll.");
+    toast.success("Poll approved and published!");
     loadRequests();
+    loadPolls();
   };
 
   const rejectRequest = async (id: string) => {

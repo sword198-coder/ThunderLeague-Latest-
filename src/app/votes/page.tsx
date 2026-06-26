@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Check, BarChart3, Clock, AlertTriangle, PenLine, Plus } from "lucide-react";
+import { Loader2, Check, BarChart3, Clock, AlertTriangle, PenLine, Plus, Users } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +35,7 @@ export default function VotesPage() {
   const router = useRouter();
   const supabase = createClient();
   const [polls, setPolls] = useState<Poll[]>([]);
+  const [playerPolls, setPlayerPolls] = useState<{ id: string; title: string; description: string | null; options: string[]; created_at: string }[]>([]);
   const [confirmedVotes, setConfirmedVotes] = useState<Map<string, { option: string; text: string | null }>>(new Map());
   const [pendingSelections, setPendingSelections] = useState<Map<string, string>>(new Map());
   const [pendingTexts, setPendingTexts] = useState<Map<string, string>>(new Map());
@@ -70,6 +71,22 @@ export default function VotesPage() {
 
       if (pollsData) setPolls(pollsData);
 
+      const { data: requestsData } = await supabase
+        .from("poll_requests")
+        .select("*")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false });
+
+      if (requestsData) {
+        setPlayerPolls(requestsData.map((r: Record<string, unknown>) => ({
+          id: r.id as string,
+          title: r.title as string,
+          description: r.description as string | null,
+          options: (r.options as string).split("\n").map((s) => s.trim()).filter(Boolean),
+          created_at: r.created_at as string,
+        })));
+      }
+
       const { data: votesData } = await supabase
         .from("votes")
         .select("*")
@@ -89,6 +106,7 @@ export default function VotesPage() {
     const channel = supabase
       .channel("votes-polls")
       .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, () => { loadData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "poll_requests" }, () => { loadData(); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -198,7 +216,7 @@ export default function VotesPage() {
         </Button>
       </div>
 
-      {activePolls.length === 0 && closedPolls.length === 0 && (
+      {activePolls.length === 0 && closedPolls.length === 0 && playerPolls.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -207,7 +225,59 @@ export default function VotesPage() {
         </Card>
       )}
 
-      {activePolls.map((poll) => {
+      {playerPolls.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+              <Users className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Players Polls</h2>
+              <p className="text-sm text-muted-foreground">Community-suggested polls approved by admins</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {playerPolls.map((rp) => (
+              <Card key={rp.id} className="border-green-500/20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-green-500" />
+                    <CardTitle className="text-base">{rp.title}</CardTitle>
+                  </div>
+                  {rp.description && (
+                    <CardDescription className="mt-1">{rp.description}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {rp.options.length > 0 && (
+                    <div className="space-y-1.5">
+                      {rp.options.map((opt, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/50">
+                          <span className="text-xs font-medium text-muted-foreground">{opt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activePolls.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+              <BarChart3 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Active Polls</h2>
+              <p className="text-sm text-muted-foreground">Cast your vote on active polls</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {activePolls.map((poll) => {
         const hasVoted = confirmedVotes.has(poll.id);
         const myVote = confirmedVotes.get(poll.id);
         const pendingSelection = pendingSelections.get(poll.id);
@@ -309,6 +379,9 @@ export default function VotesPage() {
           </Card>
         );
       })}
+          </div>
+        </div>
+      )}
 
       {closedPolls.length > 0 && (
         <div>

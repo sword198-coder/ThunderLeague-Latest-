@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2, Trophy, Calendar, Swords, Users, Clock, Check, LogIn, Hourglass, X, ExternalLink } from "lucide-react";
+import { Loader2, Trophy, Calendar, Swords, Users, Clock, Check, LogIn, Hourglass, X, ExternalLink, Plus } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -292,9 +292,21 @@ export default function TournamentsPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-500/5 rounded-full blur-[150px]" />
       </div>
       <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8 relative">
-      <div>
-        <h1 className="text-3xl font-bold">Tournaments</h1>
-        <p className="text-muted-foreground mt-1">Browse and join tournaments</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Tournaments</h1>
+          <p className="text-muted-foreground mt-1">Browse and join tournaments</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1" onClick={() => router.push("/account")}>
+            <Users className="h-4 w-4" />
+            Edit Profile
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1 opacity-50 cursor-not-allowed" disabled>
+            <Plus className="h-4 w-4" />
+            Request Tournament
+          </Button>
+        </div>
       </div>
 
       {allEmpty && (
