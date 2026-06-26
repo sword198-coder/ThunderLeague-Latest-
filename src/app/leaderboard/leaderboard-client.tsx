@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { PlayerCard } from "@/components/leaderboard/player-card";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import type { LeaderboardEntry, Profile, CardBackground, CardTitle } from "@/lib/types";
 
 const TIERS = [
@@ -121,7 +122,7 @@ export function LeaderboardClient({
   ];
 
   return (
-    <>
+    <MaintenanceGuard page="leaderboard">
       <div className="flex justify-center gap-1 mb-6 bg-muted rounded-lg p-1">
         {TIERS.map((tier) => (
           <Button
@@ -253,6 +254,6 @@ export function LeaderboardClient({
         cardBackground={selectedPlayer?.profile?.selected_card_background_id ? bgMap.get(selectedPlayer.profile.selected_card_background_id) : null}
         cardTitle={selectedPlayer?.profile?.selected_title_id ? titleMap.get(selectedPlayer.profile.selected_title_id) : null}
       />
-    </>
+    </MaintenanceGuard>
   );
 }

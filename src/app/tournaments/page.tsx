@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { JoinDialog } from "@/components/tournaments/join-dialog";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 
 const MODE_LABELS: Record<string, string> = {
   air: "Air",
@@ -283,6 +284,7 @@ export default function TournamentsPage() {
   const allEmpty = active.length === 0 && upcoming.length === 0 && past.length === 0;
 
   return (
+    <MaintenanceGuard page="tournaments">
     <div className="relative min-h-screen">
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <Image src="/background1.png" alt="" fill className="object-cover opacity-[0.50]" priority />
@@ -392,5 +394,6 @@ export default function TournamentsPage() {
       )}
       </div>
     </div>
+    </MaintenanceGuard>
   );
 }

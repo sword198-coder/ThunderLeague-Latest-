@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 const TournamentChat = dynamic(() => import("@/components/tournament-chat").then((m) => m.TournamentChat), { ssr: false });
 import { JoinDialog } from "@/components/tournaments/join-dialog";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import type { ReactNode } from "react";
 
 const MODE_LABELS: Record<string, string> = { air: "Air", ground: "Ground", both: "Air & Ground" };
@@ -285,6 +286,7 @@ export default function TournamentDetailPage() {
   };
 
   return (
+    <MaintenanceGuard page="tournaments">
     <div className="min-h-screen bg-background">
       {/* Back button */}
       <div className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-md">
@@ -923,5 +925,6 @@ export default function TournamentDetailPage() {
         onSubmit={handleJoin}
       />
     </div>
+    </MaintenanceGuard>
   );
 }

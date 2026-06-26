@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Flag, Camera, Globe, MessageCircle, Zap, Copy, Check, Link, ShoppingBag, Eye, Sparkles, Image, Film, Palette } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -250,6 +251,7 @@ export default function AccountPage() {
   const selectedTitle = profile?.selected_title_id && titles.length > 0 ? titles.find((t) => t.id === profile.selected_title_id) ?? null : null;
 
   return (
+    <MaintenanceGuard page="account">
     <div className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
       <h1 className="text-3xl font-bold">My Account</h1>
 
@@ -607,5 +609,6 @@ export default function AccountPage() {
         cardTitle={selectedTitle}
       />
     </div>
+    </MaintenanceGuard>
   );
 }

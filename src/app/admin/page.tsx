@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown, Megaphone, Flag, Ban, MessageCircle } from "lucide-react";
+import { MessageSquareText, Zap, Link as LinkIcon, Palette, Crown, Megaphone, Flag, Ban, MessageCircle, Wrench } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -255,6 +255,24 @@ export default function AdminDashboardPage() {
           <CardContent>
             <p className="text-sm text-muted-foreground">
               Temporarily ban users with a reason and duration, or issue warnings for violations.
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
+      <Link href="/admin/page-maintenance">
+        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5" />
+              Page Maintenance
+            </CardTitle>
+            <CardDescription>
+              Disable pages site-wide
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Temporarily disable pages to show a maintenance message to users.
             </p>
           </CardContent>
         </Card>

@@ -7,6 +7,7 @@ import { format, isPast } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import type { Poll, Vote } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -204,6 +205,7 @@ export default function VotesPage() {
   const closedPolls = polls.filter((p) => p.status === "closed");
 
   return (
+    <MaintenanceGuard page="votes">
     <div className="container mx-auto px-4 py-8 max-w-3xl space-y-8">
       <div className="flex items-start justify-between">
         <div>
@@ -511,5 +513,6 @@ export default function VotesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </MaintenanceGuard>
   );
 }

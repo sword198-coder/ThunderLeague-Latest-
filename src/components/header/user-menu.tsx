@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, User, Flag, HelpCircle, AlertTriangle, Trophy, BarChart3, Vote, Shield } from "lucide-react";
+import { LogOut, User, Flag, HelpCircle, AlertTriangle, Trophy, BarChart3, Vote, Shield, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useUnseenWarnings } from "@/components/warning-alert";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,7 @@ export function UserMenu() {
     { label: "Leaderboard", icon: BarChart3, href: "/leaderboard" },
     { label: "Votes", icon: Vote, href: "/votes" },
     { label: "Support", icon: HelpCircle, href: "/support" },
+{ label: "Community", icon: Users, href: "/community" },
   ] as const;
 
   const handleLogout = async () => {

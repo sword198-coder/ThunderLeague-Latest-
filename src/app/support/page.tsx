@@ -7,6 +7,7 @@ import { MessageSquareText, Plus, Send, Loader2, RefreshCw, ImagePlus, X, Paperc
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import type { SupportTicket, TicketReply } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -165,6 +166,7 @@ export default function SupportPage() {
   }
 
   return (
+    <MaintenanceGuard page="support">
     <div className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -383,5 +385,6 @@ export default function SupportPage() {
         })
       )}
     </div>
+    </MaintenanceGuard>
   );
 }
