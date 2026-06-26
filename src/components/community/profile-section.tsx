@@ -26,14 +26,14 @@ export function ProfileSection() {
   const loadProfile = async () => {
     if (!user) return;
 
-    const { data: bgData } = await supabase
-      .from("user_card_backgrounds")
-      .select("card_background_id, card_background:card_backgrounds(*)")
-      .eq("user_id", user.id)
-      .eq("is_selected", true)
-      .maybeSingle();
-
-    if (bgData && (bgData as any).card_background) setCardBg((bgData as any).card_background);
+    if (myProfile?.selected_card_background_id) {
+      const { data: bgData } = await supabase
+        .from("card_backgrounds")
+        .select("*")
+        .eq("id", myProfile.selected_card_background_id)
+        .maybeSingle();
+      if (bgData) setCardBg(bgData);
+    }
 
     const { data: postsData } = await supabase
       .from("posts")
@@ -78,9 +78,10 @@ export function ProfileSection() {
   const initials = p?.display_name?.slice(0, 2).toUpperCase() || p?.username?.slice(0, 2).toUpperCase() || "??";
 
   const bg = cardBg;
-  const bgStyle = bg?.type === "gradient"
-    ? { backgroundImage: `linear-gradient(135deg, ${bg.gradient_from}, ${bg.gradient_via || bg.gradient_from}, ${bg.gradient_to})` }
-    : bg?.file_url
+  const bgType = bg?.type || "gradient";
+  const bgStyle = bgType === "gradient"
+    ? { backgroundImage: `linear-gradient(135deg, ${bg?.gradient_from || "#1a1a2e"}, ${bg?.gradient_via || bg?.gradient_from || "#16213e"}, ${bg?.gradient_to || "#0f3460"})` }
+    : bgType === "image" && bg?.file_url
     ? { backgroundImage: `url(${bg.file_url})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { backgroundImage: "linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)" };
 
@@ -91,9 +92,12 @@ export function ProfileSection() {
       {/* Profile header */}
       <Card className="border-border/40 overflow-hidden rounded-2xl">
         {/* Banner */}
-        <div className="aspect-[3/1] relative bg-muted" style={bgStyle}>
-          {bg?.type === "image" && bg.file_url && (
+        <div className="aspect-[3/1] relative bg-muted overflow-hidden" style={bgType === "gradient" ? bgStyle : {}}>
+          {bgType === "image" && bg?.file_url && (
             <Image src={bg.file_url} alt="" fill className="object-cover" unoptimized />
+          )}
+          {bgType === "video" && bg?.file_url && (
+            <video src={bg.file_url} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
           )}
         </div>
 

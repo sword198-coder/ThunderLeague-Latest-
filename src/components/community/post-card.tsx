@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Heart, MessageCircle, Trash2, Share } from "lucide-react";
+import { Heart, MessageCircle, Trash2, Share, UserPlus, UserCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -18,9 +18,12 @@ export function PostCard({ post, onUpdate }: { post: PostWithDetails; onUpdate: 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.like_count || 0);
   const [showComments, setShowComments] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const supabase = createClient();
 
   const isOwner = user?.id === post.user_id;
+  const canFollow = user && !isOwner && post.profile;
   const initials = post.profile?.display_name
     ? post.profile.display_name.slice(0, 2).toUpperCase()
     : post.profile?.username?.slice(0, 2).toUpperCase() || "??";
@@ -28,6 +31,26 @@ export function PostCard({ post, onUpdate }: { post: PostWithDetails; onUpdate: 
   useEffect(() => {
     if (user && post.likes) setLiked(post.likes.some((l) => l.user_id === user.id));
   }, [user, post.likes]);
+
+  useEffect(() => {
+    if (!user || isOwner || !post.profile) return;
+    supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", post.user_id).maybeSingle().then(({ data }) => {
+      setFollowing(!!data);
+    });
+  }, [user, post.user_id, isOwner]);
+
+  const toggleFollow = async () => {
+    if (!user || followLoading) return;
+    setFollowLoading(true);
+    if (following) {
+      await supabase.from("follows").delete().match({ follower_id: user.id, following_id: post.user_id });
+      setFollowing(false);
+    } else {
+      await supabase.from("follows").insert({ follower_id: user.id, following_id: post.user_id });
+      setFollowing(true);
+    }
+    setFollowLoading(false);
+  };
 
   const toggleLike = async () => {
     if (!user) return;
@@ -76,11 +99,30 @@ export function PostCard({ post, onUpdate }: { post: PostWithDetails; onUpdate: 
                   @{post.profile?.username || "unknown"} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                 </span>
               </div>
+              <div className="flex items-center gap-1 shrink-0">
+              {canFollow && (
+                <button
+                  onClick={toggleFollow}
+                  disabled={followLoading}
+                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full border transition-all ${
+                    following
+                      ? "border-border/50 text-muted-foreground hover:border-red-500/50 hover:text-red-400"
+                      : "border-primary/50 text-primary hover:bg-primary/10"
+                  }`}
+                >
+                  {following ? (
+                    <><UserCheck className="h-3 w-3" /> Following</>
+                  ) : (
+                    <><UserPlus className="h-3 w-3" /> Follow</>
+                  )}
+                </button>
+              )}
               {isOwner && (
                 <button onClick={deletePost} className="p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               )}
+            </div>
             </div>
 
             {/* Text */}

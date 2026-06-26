@@ -74,7 +74,7 @@ export default function PageMaintenancePage() {
     setUploading(true);
     const path = `maintenance_${Date.now()}_${imageFile.name}`;
     const { error: uploadError } = await supabase.storage.from("maintenance-images").upload(path, imageFile);
-    if (uploadError) { toast.error("Failed to upload image"); setUploading(false); return; }
+    if (uploadError) { toast.error(`Upload failed: ${uploadError.message}`); setUploading(false); return; }
     const { data: urlData } = supabase.storage.from("maintenance-images").getPublicUrl(path);
     const publicUrl = urlData?.publicUrl || "";
 
