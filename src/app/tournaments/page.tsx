@@ -297,16 +297,10 @@ export default function TournamentsPage() {
           <h1 className="text-3xl font-bold">Tournaments</h1>
           <p className="text-muted-foreground mt-1">Browse and join tournaments</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => router.push("/account")}>
-            <Users className="h-4 w-4" />
-            Edit Profile
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1 opacity-50 cursor-not-allowed" disabled>
-            <Plus className="h-4 w-4" />
-            Request Tournament
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" className="gap-1 opacity-50 cursor-not-allowed" disabled>
+          <Plus className="h-4 w-4" />
+          Request Tournament
+        </Button>
       </div>
 
       {allEmpty && (

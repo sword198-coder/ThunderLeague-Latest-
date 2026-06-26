@@ -48,6 +48,7 @@ export default function AccountPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [displayName, setDisplayName] = useState("");
   const [wtUsername, setWtUsername] = useState("");
   const [squadron, setSquadron] = useState("");
   const [countries, setCountries] = useState<string[]>([]);
@@ -68,6 +69,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (profile) {
+      setDisplayName(profile.display_name ?? "");
       setWtUsername(profile.war_thunder_username ?? "");
       setSquadron(profile.squadron_name ?? "");
       setNationality(profile.nationality ?? "");
@@ -224,6 +226,7 @@ export default function AccountPage() {
     const { error } = await supabase
       .from("profiles")
       .update({
+        display_name: displayName || null,
         war_thunder_username: wtUsername || null,
         squadron_name: squadron || null,
         nationality: nationality || null,
@@ -331,10 +334,10 @@ export default function AccountPage() {
               <p className="text-sm font-medium mt-1">{profile?.last_name || "\u2014"}</p>
             </div>
           </div>
-          <div>
-            <Label>Display Name</Label>
-            <p className="text-sm font-medium mt-1">{profile?.display_name || "\u2014"}</p>
-          </div>
+            <div>
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your display name" className="mt-1" />
+            </div>
           <div className="space-y-2">
             <Label htmlFor="nationality" className="flex items-center gap-1.5">
               <Globe className="h-4 w-4" />
