@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2, Wrench, Globe, Shield, BarChart3, Vote, MessageSquareText, Users, Settings, ImageIcon } from "lucide-react";
+import { Loader2, Wrench, Globe, Shield, BarChart3, Vote, MessageSquareText, Users, Settings, ImageIcon, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,9 @@ export default function PageMaintenancePage() {
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState("");
   const [image, setImage] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const supabase = createClient();
@@ -58,15 +61,45 @@ export default function PageMaintenancePage() {
     toast.success(`${key} page ${newStatus[key] ? "disabled" : "enabled"}`);
   };
 
-  const saveImage = async () => {
+  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return;
+    setUploading(true);
+    const path = `maintenance_${Date.now()}_${imageFile.name}`;
+    const { error: uploadError } = await supabase.storage.from("maintenance-images").upload(path, imageFile);
+    if (uploadError) { toast.error("Failed to upload image"); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("maintenance-images").getPublicUrl(path);
+    const publicUrl = urlData?.publicUrl || "";
+
     setSaving("img");
     const { error } = await supabase.from("site_settings").upsert(
-      { key: "maintenance_image", value: image },
+      { key: "maintenance_image", value: publicUrl },
       { onConflict: "key" }
     );
     setSaving(null);
+    setUploading(false);
     if (error) { toast.error("Failed to save image"); return; }
-    toast.success("Image saved");
+    setImage(publicUrl);
+    setImageFile(null);
+    setImagePreview(null);
+    toast.success("Image uploaded and saved");
+  };
+
+  const removeImage = async () => {
+    setSaving("img");
+    await supabase.from("site_settings").upsert({ key: "maintenance_image", value: "" }, { onConflict: "key" });
+    setSaving(null);
+    setImage("");
+    setImageFile(null);
+    setImagePreview(null);
+    toast.success("Image removed");
   };
 
   const saveMessage = async () => {
@@ -149,22 +182,61 @@ export default function PageMaintenancePage() {
             <ImageIcon className="h-5 w-5" />
             Maintenance Image
           </CardTitle>
-          <CardDescription>Optional image shown on disabled pages</CardDescription>
+          <CardDescription>Upload an image to show on disabled pages</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
+          {/* File upload */}
           <div className="space-y-2">
-            <Label htmlFor="img">Image URL</Label>
-            <Input id="img" value={image} onChange={(e) => setImage(e.target.value)} placeholder="https://example.com/image.png" />
+            <Label htmlFor="img-upload">Choose image</Label>
+            <input
+              id="img-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageFile}
+            />
+            <label
+              htmlFor="img-upload"
+              className="flex items-center justify-center gap-2 w-full h-24 rounded-lg border-2 border-dashed border-border/50 bg-muted/30 cursor-pointer hover:bg-muted/50 hover:border-primary/30 transition-colors"
+            >
+              <Upload className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Click to upload image</span>
+            </label>
           </div>
-          {image && (
-            <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border/50">
-              <Image src={image} alt="Preview" fill className="object-contain" unoptimized />
+
+          {/* Preview of newly selected file */}
+          {imagePreview && (
+            <div className="space-y-2">
+              <Label>Preview</Label>
+              <div className="relative w-40 h-40 rounded-lg overflow-hidden border border-border/50">
+                <Image src={imagePreview} alt="" fill className="object-contain" unoptimized />
+              </div>
+              <Button onClick={uploadImage} disabled={uploading} size="sm">
+                {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                {uploading ? "Uploading..." : "Upload Image"}
+              </Button>
             </div>
           )}
-          <Button onClick={saveImage} disabled={saving === "img"} size="sm">
-            {saving === "img" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-            Save Image
-          </Button>
+
+          {/* Saved image */}
+          {image && !imagePreview && (
+            <div className="space-y-2">
+              <Label>Current image</Label>
+              <div className="relative w-40 h-40 rounded-lg overflow-hidden border border-border/50">
+                <Image src={image} alt="" fill className="object-contain" unoptimized />
+                <button
+                  onClick={removeImage}
+                  className="absolute top-1 right-1 p-1 rounded-full bg-black/50 hover:bg-black/70 text-white"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!image && !imagePreview && (
+            <p className="text-xs text-muted-foreground">No image set. Upload one above.</p>
+          )}
         </CardContent>
       </Card>
     </div>

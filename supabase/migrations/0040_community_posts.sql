@@ -106,6 +106,18 @@ create index if not exists idx_post_comments_created_at on post_comments(created
 create index if not exists idx_follows_follower_id on follows(follower_id);
 create index if not exists idx_follows_following_id on follows(following_id);
 
+-- Create storage bucket for maintenance images
+insert into storage.buckets (id, name, public) values ('maintenance-images', 'maintenance-images', true)
+on conflict (id) do nothing;
+
+create policy "Anyone can view maintenance images"
+  on storage.objects for select
+  using (bucket_id = 'maintenance-images');
+
+create policy "Admins can upload maintenance images"
+  on storage.objects for insert
+  with check (bucket_id = 'maintenance-images' and auth.role() = 'authenticated');
+
 -- Create storage bucket for community post images
 insert into storage.buckets (id, name, public) values ('community-posts', 'community-posts', true)
 on conflict (id) do nothing;
