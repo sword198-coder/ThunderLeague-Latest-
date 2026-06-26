@@ -164,6 +164,7 @@ export type Tournament = {
   chat_enabled: boolean;
   chat_visible: boolean;
   thumbnail_url: string | null;
+  rounds_to_win: number;
 };
 
 export type TournamentParticipant = {
@@ -191,6 +192,8 @@ export type TournamentMatch = {
   scheduled_at: string | null;
   status: "pending" | "in_progress" | "completed" | "cancelled";
   winner_id: string | null;
+  player1_score: number | null;
+  player2_score: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

@@ -329,6 +329,11 @@ export default function TournamentDetailPage() {
                   >
                     {tournament.system === "1v1" ? "1v1" : "4v4"}
                   </Badge>
+                  {tournament.rounds_to_win > 1 && (
+                    <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400">
+                      Best of {(tournament.rounds_to_win * 2) - 1}
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
 
@@ -648,6 +653,9 @@ export default function TournamentDetailPage() {
                                         </>
                                       )}
                                     </div>
+                                    {(m.player1_score != null || m.player2_score != null) && (
+                                      <span className="text-sm font-bold tabular-nums shrink-0">{m.player1_score ?? "-"}</span>
+                                    )}
                                     {m.winner_id === m.player1_id && (
                                       <Trophy className="h-4 w-4 text-green-500 shrink-0" />
                                     )}
@@ -689,6 +697,9 @@ export default function TournamentDetailPage() {
                                         </>
                                       )}
                                     </div>
+                                    {(m.player1_score != null || m.player2_score != null) && (
+                                      <span className="text-sm font-bold tabular-nums shrink-0">{m.player2_score ?? "-"}</span>
+                                    )}
                                     {m.winner_id === m.player2_id && (
                                       <Trophy className="h-4 w-4 text-green-500 shrink-0" />
                                     )}
@@ -703,6 +714,9 @@ export default function TournamentDetailPage() {
                                     <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
                                       <span className="w-2 h-2 rounded-full bg-blue-500/60" />
                                       Team 1
+                                      {(m.player1_score != null || m.player2_score != null) && (
+                                        <span className="ml-auto text-sm font-bold tabular-nums text-foreground">{m.player1_score ?? "-"}</span>
+                                      )}
                                     </p>
                                     <div className="space-y-1.5">
                                       {m.team1_player_ids.length === 0 ? (
@@ -742,6 +756,9 @@ export default function TournamentDetailPage() {
                                     <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
                                       <span className="w-2 h-2 rounded-full bg-purple-500/60" />
                                       Team 2
+                                      {(m.player1_score != null || m.player2_score != null) && (
+                                        <span className="ml-auto text-sm font-bold tabular-nums text-foreground">{m.player2_score ?? "-"}</span>
+                                      )}
                                     </p>
                                     <div className="space-y-1.5">
                                       {m.team2_player_ids.length === 0 ? (

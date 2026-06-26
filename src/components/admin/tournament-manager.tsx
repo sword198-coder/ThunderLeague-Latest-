@@ -46,6 +46,7 @@ const schema = z.object({
   end_date: z.string().min(1),
   max_players: z.number().int().min(1),
   system: z.enum(["1v1", "4v4"]),
+  rounds_to_win: z.number().int().min(1),
   status: z.enum(["upcoming", "active", "completed", "cancelled"]),
   chat_enabled: z.boolean().optional(),
   chat_visible: z.boolean().optional(),
@@ -128,7 +129,7 @@ export function TournamentManager() {
   const startCreate = () => {
     setEditing(null);
     setThumbnailUrl(null);
-    reset({ status: "upcoming", mode: "air", tier: "mid", max_players: 16, system: "1v1", description: "", battle_rating: "", chat_enabled: true, chat_visible: true });
+    reset({ status: "upcoming", mode: "air", tier: "mid", max_players: 16, system: "1v1", rounds_to_win: 1, description: "", battle_rating: "", chat_enabled: true, chat_visible: true });
     setShowForm(true);
   };
 
@@ -144,6 +145,7 @@ export function TournamentManager() {
     setValue("end_date", t.end_date.slice(0, 16));
     setValue("max_players", t.max_players);
     setValue("system", t.system);
+    setValue("rounds_to_win", t.rounds_to_win);
     setValue("status", t.status);
     setValue("chat_enabled", t.chat_enabled);
     setValue("chat_visible", t.chat_visible);
@@ -190,6 +192,7 @@ export function TournamentManager() {
       max_players: data.max_players,
       system: data.system,
       status: data.status,
+      rounds_to_win: data.rounds_to_win,
       chat_enabled: data.chat_enabled ?? true,
       chat_visible: data.chat_visible ?? true,
       thumbnail_url: thumbnailUrl,
@@ -393,6 +396,11 @@ export function TournamentManager() {
     openManage(manageTournament);
   };
 
+  const getPlayerName = (playerId: string | null) => {
+    if (!playerId) return "TBD";
+    return approvedPlayers.find((p) => p.id === playerId)?.name ?? "Unknown";
+  };
+
   const updateMatch = async (matchId: string, updates: Partial<TournamentMatch>) => {
     const { error } = await supabase
       .from("tournament_matches")
@@ -594,7 +602,7 @@ export function TournamentManager() {
                   {errors.end_date && <p className="text-sm text-destructive">{errors.end_date.message}</p>}
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="max_players">Max Players</Label>
                   <Input id="max_players" type="number" {...register("max_players", { valueAsNumber: true })} min={1} />
@@ -606,6 +614,11 @@ export function TournamentManager() {
                     <option value="1v1">1v1 Knockout</option>
                     <option value="4v4">4v4 Teams</option>
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rounds_to_win">Rounds to Win</Label>
+                  <Input id="rounds_to_win" type="number" {...register("rounds_to_win", { valueAsNumber: true })} min={1} />
+                  {errors.rounds_to_win && <p className="text-sm text-destructive">{errors.rounds_to_win.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
@@ -939,7 +952,15 @@ export function TournamentManager() {
                             <p className="text-xs text-muted-foreground mb-1">Status</p>
                             <select
                               value={m.status}
-                              onChange={(e) => updateMatch(m.id, { status: e.target.value } as Partial<TournamentMatch>)}
+                              onChange={(e) => {
+                                const newStatus = e.target.value;
+                                const updates: Record<string, unknown> = { status: newStatus };
+                                if (newStatus === "completed" && m.player1_score != null && m.player2_score != null) {
+                                  if (m.player1_score > m.player2_score) updates.winner_id = m.player1_id;
+                                  else if (m.player2_score > m.player1_score) updates.winner_id = m.player2_id;
+                                }
+                                updateMatch(m.id, updates as Partial<TournamentMatch>);
+                              }}
                               className="w-full text-xs bg-transparent border rounded px-1 py-1"
                             >
                               <option value="pending">Pending</option>
@@ -972,6 +993,46 @@ export function TournamentManager() {
                                 </>
                               )}
                             </select>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-2 border-t flex items-center gap-4">
+                          <p className="text-xs text-muted-foreground whitespace-nowrap">Scores:</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">{manageTournament?.system === "1v1" ? getPlayerName(m.player1_id) : "Team 1"}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={m.player1_score ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseInt(e.target.value) : (null as unknown as number);
+                                const updates: Record<string, unknown> = { player1_score: val };
+                                if (val !== null && (m.player2_score ?? 0) !== null && m.status === "completed") {
+                                  const p2 = m.player2_score ?? 0;
+                                  if (val > p2) updates.winner_id = m.player1_id;
+                                  else if (val < p2) updates.winner_id = m.player2_id;
+                                }
+                                updateMatch(m.id, updates as Partial<TournamentMatch>);
+                              }}
+                              className="w-16 text-xs bg-transparent border rounded px-2 py-1 text-center"
+                            />
+                            <span className="text-xs text-muted-foreground">:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={m.player2_score ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value ? parseInt(e.target.value) : (null as unknown as number);
+                                const updates: Record<string, unknown> = { player2_score: val };
+                                if (val !== null && (m.player1_score ?? 0) !== null && m.status === "completed") {
+                                  const p1 = m.player1_score ?? 0;
+                                  if (val > p1) updates.winner_id = m.player2_id;
+                                  else if (val < p1) updates.winner_id = m.player1_id;
+                                }
+                                updateMatch(m.id, updates as Partial<TournamentMatch>);
+                              }}
+                              className="w-16 text-xs bg-transparent border rounded px-2 py-1 text-center"
+                            />
+                            <span className="text-xs text-muted-foreground">{manageTournament?.system === "1v1" ? getPlayerName(m.player2_id) : "Team 2"}</span>
                           </div>
                         </div>
                         <div className="flex justify-end gap-1 mt-3 pt-2 border-t">

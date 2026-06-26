@@ -485,7 +485,7 @@ export default function AccountPage() {
           {backgrounds.length === 0 ? (
             <p className="text-sm text-muted-foreground">Loading backgrounds...</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {backgrounds.map((bg) => {
                 const owned = ownedBgIds.includes(bg.id);
                 const isSelected = selectedBgId === bg.id;
@@ -496,7 +496,7 @@ export default function AccountPage() {
                       isSelected ? "border-primary ring-2 ring-primary/30" : "border-border"
                     }`}
                   >
-                    <div className="h-16 bg-muted relative overflow-hidden">
+                    <div className="h-28 bg-muted relative overflow-hidden">
                       {bg.type === "video" ? (
                         <video src={bg.file_url} className="w-full h-full object-cover" muted autoPlay loop playsInline />
                       ) : bg.type === "image" ? (
@@ -510,8 +510,8 @@ export default function AccountPage() {
                         </div>
                       )}
                     </div>
-                    <div className="p-2 space-y-1">
-                      <p className="text-xs font-semibold truncate flex items-center gap-1">
+                    <div className="p-3 space-y-2">
+                      <p className="text-sm font-semibold truncate flex items-center gap-1">
                         {bg.type === "gradient" ? <Palette className="h-3 w-3" /> : bg.type === "image" ? <Image className="h-3 w-3" /> : <Film className="h-3 w-3" />}
                         {bg.name}
                       </p>
