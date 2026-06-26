@@ -20,6 +20,7 @@ type Props = {
   tournamentTitle: string;
   defaultInGameName: string;
   defaultSquadron: string;
+  defaultCountry?: string;
   onSubmit: (data: {
     in_game_name: string;
     squadron: string;
@@ -34,12 +35,13 @@ export function JoinDialog({
   tournamentTitle,
   defaultInGameName,
   defaultSquadron,
+  defaultCountry,
   onSubmit,
 }: Props) {
   const [step, setStep] = useState<"form" | "terms">("form");
   const [inGameName, setInGameName] = useState(defaultInGameName);
   const [squadron, setSquadron] = useState(defaultSquadron);
-  const [country, setCountry] = useState("");
+  const [country, setCountry] = useState(defaultCountry ?? "");
   const [vehicle, setVehicle] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -49,11 +51,11 @@ export function JoinDialog({
       setStep("form");
       setInGameName(defaultInGameName);
       setSquadron(defaultSquadron);
-      setCountry("");
+      setCountry(defaultCountry ?? "");
       setVehicle("");
       setAccepted(false);
     }
-  }, [open, defaultInGameName, defaultSquadron]);
+  }, [open, defaultInGameName, defaultSquadron, defaultCountry]);
 
   const handleNext = () => {
     if (!inGameName.trim()) return;

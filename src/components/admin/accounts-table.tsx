@@ -117,10 +117,15 @@ export function AccountsTable() {
                 <TableHead>Points</TableHead>
                 <TableHead>Display Name</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>First Name</TableHead>
+                <TableHead>Last Name</TableHead>
                 <TableHead>Discord</TableHead>
                 <TableHead>Nationality</TableHead>
                 <TableHead>WT Username</TableHead>
                 <TableHead>Squadron</TableHead>
+                <TableHead>Countries</TableHead>
+                <TableHead>Tiers</TableHead>
+                <TableHead>Mode</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="w-20">Notify</TableHead>
               </TableRow>
@@ -159,10 +164,15 @@ export function AccountsTable() {
                       {a.role === "super_admin" ? "Admin" : "User"}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-xs">{a.first_name || "\u2014"}</TableCell>
+                  <TableCell className="text-xs">{a.last_name || "\u2014"}</TableCell>
                   <TableCell>{a.discord_username || "\u2014"}</TableCell>
                   <TableCell>{a.nationality || "\u2014"}</TableCell>
                   <TableCell>{a.war_thunder_username || "\u2014"}</TableCell>
                   <TableCell>{a.squadron_name || "\u2014"}</TableCell>
+                  <TableCell className="text-xs">{(a.play_countries ?? []).join(", ") || "\u2014"}</TableCell>
+                  <TableCell className="text-xs">{(a.play_tiers ?? []).join(", ") || "\u2014"}</TableCell>
+                  <TableCell className="text-xs">{a.play_mode || "\u2014"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                     {format(new Date(a.created_at), "MMM d, yyyy")}
                   </TableCell>

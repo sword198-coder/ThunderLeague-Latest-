@@ -235,7 +235,7 @@ export default function AccountPage() {
       .eq("id", user.id);
 
     if (error) {
-      toast.error("Failed to update profile");
+      toast.error("Failed to update profile: " + error.message);
     } else {
       toast.success("Profile updated");
       await refresh();
@@ -364,6 +364,7 @@ export default function AccountPage() {
               value={discordUsername}
               onChange={(e) => setDiscordUsername(e.target.value)}
               placeholder="e.g. user#1234"
+              autoComplete="off"
             />
           </div>
         </CardContent>

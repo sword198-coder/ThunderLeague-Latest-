@@ -7,6 +7,7 @@ import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCirc
 import { format, differenceInHours } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 import type { Tournament, TournamentMatch, TournamentParticipant } from "@/lib/types";
 import { WT_NATIONS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ const STATUS_STYLE: Record<string, { border: string; bg: string; text: string; d
 export default function TournamentDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const supabase = createClient();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
@@ -799,6 +800,38 @@ export default function TournamentDetailPage() {
                                   {format(new Date(m.scheduled_at), "MMM d, yyyy HH:mm")}
                                 </div>
                               )}
+                              {m.status !== "completed" && m.status !== "cancelled" && user && (
+                                (() => {
+                                  const isPlayerInMatch = tournament.system === "1v1"
+                                    ? user.id === m.player1_id || user.id === m.player2_id
+                                    : [...m.team1_player_ids, ...m.team2_player_ids].includes(user.id);
+                                  if (!isPlayerInMatch) return null;
+                                  return (
+                                    <div className="pt-3 border-t border-border/30 mt-3">
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="text-xs h-7 gap-1"
+                                        onClick={async () => {
+                                          if (!confirm("Are you sure you want to forfeit? The opponent will automatically win.")) return;
+                                          const opponentId = tournament.system === "1v1"
+                                            ? (user.id === m.player1_id ? m.player2_id : m.player1_id)
+                                            : null;
+                                          await supabase.from("tournament_matches").update({
+                                            status: "completed",
+                                            winner_id: opponentId,
+                                          }).eq("id", m.id);
+                                          toast.success("You have forfeited the match.");
+                                          window.location.reload();
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                        Forfeit
+                                      </Button>
+                                    </div>
+                                  );
+                                })()
+                              )}
                             </CardContent>
                           </Card>
                         );
@@ -849,8 +882,9 @@ export default function TournamentDetailPage() {
         open={showJoin}
         onOpenChange={setShowJoin}
         tournamentTitle={tournament.title}
-        defaultInGameName=""
-        defaultSquadron=""
+        defaultInGameName={profile?.war_thunder_username ?? ""}
+        defaultSquadron={profile?.squadron_name ?? ""}
+        defaultCountry={profile?.nationality ?? ""}
         onSubmit={handleJoin}
       />
     </div>
