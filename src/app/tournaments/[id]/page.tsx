@@ -81,6 +81,29 @@ export default function TournamentDetailPage() {
   const [showChat, setShowChat] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      if (!tournament) return;
+      const now = Date.now();
+      const start = new Date(tournament.start_date).getTime();
+      const end = new Date(tournament.end_date).getTime();
+      const target = now < start ? start : now < end ? end : 0;
+      if (!target) { setTimeLeft(""); return; }
+      const diff = target - now;
+      if (diff <= 0) { setTimeLeft(""); return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      const prefix = now < start ? "Starts in" : "Ends in";
+      setTimeLeft(`${prefix} ${d}d ${h}h ${m}m ${s}s`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [tournament]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -355,6 +378,18 @@ export default function TournamentDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {timeLeft && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                    <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                      <Clock className="h-4 w-4 text-amber-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Time Remaining</p>
+                      <p className="text-sm font-bold tabular-nums text-amber-400">{timeLeft}</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border/30">
                   <Users className="h-4 w-4 text-muted-foreground shrink-0" />
