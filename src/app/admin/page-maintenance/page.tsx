@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Wrench, Globe, Shield, BarChart3, Vote, MessageSquareText, Users, Settings } from "lucide-react";
+import Image from "next/image";
+import { Loader2, Wrench, Globe, Shield, BarChart3, Vote, MessageSquareText, Users, Settings, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const PAGES = [
 export default function PageMaintenancePage() {
   const [status, setStatus] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState("");
+  const [image, setImage] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const supabase = createClient();
@@ -31,10 +33,12 @@ export default function PageMaintenancePage() {
       if (data) {
         const statusKey = data.find((s) => s.key === "page_maintenance");
         const msgKey = data.find((s) => s.key === "maintenance_message");
+        const imgKey = data.find((s) => s.key === "maintenance_image");
         if (statusKey) {
           try { setStatus(JSON.parse(statusKey.value)); } catch { setStatus({}); }
         }
         if (msgKey) setMessage(msgKey.value);
+        if (imgKey) setImage(imgKey.value);
       }
       setLoading(false);
     };
@@ -52,6 +56,17 @@ export default function PageMaintenancePage() {
     if (error) { toast.error("Failed to update"); return; }
     setStatus(newStatus);
     toast.success(`${key} page ${newStatus[key] ? "disabled" : "enabled"}`);
+  };
+
+  const saveImage = async () => {
+    setSaving("img");
+    const { error } = await supabase.from("site_settings").upsert(
+      { key: "maintenance_image", value: image },
+      { onConflict: "key" }
+    );
+    setSaving(null);
+    if (error) { toast.error("Failed to save image"); return; }
+    toast.success("Image saved");
   };
 
   const saveMessage = async () => {
@@ -124,6 +139,31 @@ export default function PageMaintenancePage() {
           <Button onClick={saveMessage} disabled={saving === "msg"} size="sm">
             {saving === "msg" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
             Save Message
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ImageIcon className="h-5 w-5" />
+            Maintenance Image
+          </CardTitle>
+          <CardDescription>Optional image shown on disabled pages</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="img">Image URL</Label>
+            <Input id="img" value={image} onChange={(e) => setImage(e.target.value)} placeholder="https://example.com/image.png" />
+          </div>
+          {image && (
+            <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border/50">
+              <Image src={image} alt="Preview" fill className="object-contain" unoptimized />
+            </div>
+          )}
+          <Button onClick={saveImage} disabled={saving === "img"} size="sm">
+            {saving === "img" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+            Save Image
           </Button>
         </CardContent>
       </Card>
