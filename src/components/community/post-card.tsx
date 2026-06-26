@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Heart, MessageCircle, Trash2 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { Heart, MessageCircle, Trash2, Share } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { CommentSection } from "./comment-section";
 import type { Post, Profile, PostLike } from "@/lib/types";
 
@@ -26,9 +26,7 @@ export function PostCard({ post, onUpdate }: { post: PostWithDetails; onUpdate: 
     : post.profile?.username?.slice(0, 2).toUpperCase() || "??";
 
   useEffect(() => {
-    if (user && post.likes) {
-      setLiked(post.likes.some((l) => l.user_id === user.id));
-    }
+    if (user && post.likes) setLiked(post.likes.some((l) => l.user_id === user.id));
   }, [user, post.likes]);
 
   const toggleLike = async () => {
@@ -50,54 +48,83 @@ export function PostCard({ post, onUpdate }: { post: PostWithDetails; onUpdate: 
     onUpdate();
   };
 
+  const handleShare = async () => {
+    const text = `${post.profile?.display_name || post.profile?.username}: "${post.text}"`;
+    if (navigator.share) {
+      await navigator.share({ title: "BPL Community", text });
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
+  };
+
   return (
-    <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
-      <div className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={post.profile?.avatar_url ?? undefined} />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-semibold">{post.profile?.display_name || post.profile?.username || "Unknown"}</p>
-              <p className="text-xs text-muted-foreground" title={format(new Date(post.created_at), "MMM d, yyyy h:mm a")}>
-                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-              </p>
+    <Card className="border-border/40 rounded-2xl overflow-hidden transition-colors hover:border-border/60">
+      <div className="p-4">
+        {/* Header */}
+        <div className="flex items-start gap-3">
+          <Avatar className="h-11 w-11 shrink-0">
+            <AvatarImage src={post.profile?.avatar_url ?? undefined} />
+            <AvatarFallback className="text-xs font-bold">{initials}</AvatarFallback>
+          </Avatar>
+
+          <div className="flex-1 min-w-0">
+            {/* Name row */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm font-extrabold truncate">{post.profile?.display_name || post.profile?.username || "Unknown"}</span>
+                <span className="text-sm text-muted-foreground truncate shrink-0">
+                  @{post.profile?.username || "unknown"} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                </span>
+              </div>
+              {isOwner && (
+                <button onClick={deletePost} className="p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Text */}
+            {post.text && (
+              <p className="text-sm mt-1 whitespace-pre-wrap leading-relaxed">{post.text}</p>
+            )}
+
+            {/* Image */}
+            {post.image_url && (
+              <div className="relative w-full aspect-video mt-3 rounded-xl overflow-hidden border border-border/30 bg-muted">
+                <Image src={post.image_url} alt="" fill className="object-cover" unoptimized />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-8 mt-3 text-muted-foreground">
+              <button onClick={() => setShowComments(!showComments)} className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors group">
+                <div className="p-1.5 rounded-full group-hover:bg-primary/10 transition-colors">
+                  <MessageCircle className="h-4 w-4" />
+                </div>
+                {post.comment_count || 0}
+              </button>
+              <button onClick={toggleLike} className={`flex items-center gap-1.5 text-xs transition-colors group ${liked ? "text-red-500" : "hover:text-red-400"}`}>
+                <div className={`p-1.5 rounded-full transition-colors ${liked ? "bg-red-500/10" : "group-hover:bg-red-500/10"}`}>
+                  <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+                </div>
+                {likeCount}
+              </button>
+              <button onClick={handleShare} className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors group">
+                <div className="p-1.5 rounded-full group-hover:bg-primary/10 transition-colors">
+                  <Share className="h-4 w-4" />
+                </div>
+              </button>
             </div>
           </div>
-          {isOwner && (
-            <button onClick={deletePost} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {post.text && <p className="text-sm whitespace-pre-wrap">{post.text}</p>}
-
-        {post.image_url && (
-          <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border/30">
-            <Image src={post.image_url} alt="" fill className="object-cover" unoptimized />
-          </div>
-        )}
-
-        <div className="flex items-center gap-4 pt-1 text-sm text-muted-foreground">
-          <button onClick={toggleLike} className={`flex items-center gap-1.5 transition-colors ${liked ? "text-red-500" : "hover:text-red-400"}`}>
-            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
-            {likeCount}
-          </button>
-          <button onClick={() => setShowComments(!showComments)} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-            <MessageCircle className="h-4 w-4" />
-            {post.comment_count || 0}
-          </button>
         </div>
       </div>
 
+      {/* Comments */}
       {showComments && (
         <div className="border-t border-border/30">
           <CommentSection postId={post.id} />
         </div>
       )}
-    </div>
+    </Card>
   );
 }
