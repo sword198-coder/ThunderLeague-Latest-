@@ -948,6 +948,31 @@ export function TournamentManager() {
                               <option value="cancelled">Cancelled</option>
                             </select>
                           </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Winner</p>
+                            <select
+                              value={m.winner_id ?? ""}
+                              onChange={(e) => updateMatch(m.id, { winner_id: e.target.value || null } as Partial<TournamentMatch>)}
+                              className="w-full text-xs bg-transparent border rounded px-1 py-1"
+                            >
+                              <option value="">—</option>
+                              {manageTournament?.system === "1v1" ? (
+                                <>
+                                  {[m.player1_id, m.player2_id].filter(Boolean).map((pid) => {
+                                    const pl = approvedPlayers.find((a) => a.id === pid);
+                                    return <option key={pid} value={pid!}>{pl?.name ?? pid}</option>;
+                                  })}
+                                </>
+                              ) : (
+                                <>
+                                  {[...m.team1_player_ids, ...m.team2_player_ids].map((pid) => {
+                                    const pl = approvedPlayers.find((a) => a.id === pid);
+                                    return <option key={pid} value={pid}>{pl?.name ?? pid}</option>;
+                                  })}
+                                </>
+                              )}
+                            </select>
+                          </div>
                         </div>
                         <div className="flex justify-end gap-1 mt-3 pt-2 border-t">
                           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => notifyMatchPlayers(m)}>

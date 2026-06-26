@@ -202,7 +202,7 @@ export function LeaderboardClient({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredEntries.map((entry) => (
+          {filteredEntries.slice(3).map((entry) => (
             <TableRow key={entry.id}>
               <TableCell className="text-center font-medium">
                 {entry.rank <= 3 ? (

@@ -504,7 +504,7 @@ export default function TournamentDetailPage() {
                     </div>
                   </div>
 
-                  {!isParticipant && isUpcoming && (
+                  {!isParticipant && (effectiveStatus === "upcoming" || effectiveStatus === "active") && (
                     <div className="w-full max-w-xs space-y-2">
                       {joinLocked && (
                         <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
@@ -546,7 +546,7 @@ export default function TournamentDetailPage() {
                     </div>
                   )}
 
-                  {!isUpcoming && !isParticipant && (
+                  {!isParticipant && (effectiveStatus === "completed" || effectiveStatus === "cancelled") && (
                     <div className="w-full max-w-xs p-4 rounded-xl bg-muted/50 border border-border/30 text-center">
                       <p className="text-sm text-muted-foreground font-medium capitalize">{effectiveStatus}</p>
                       <p className="text-xs text-muted-foreground/60 mt-1">Registration is not open</p>
