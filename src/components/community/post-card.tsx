@@ -13,7 +13,7 @@ import type { Post, Profile, PostLike } from "@/lib/types";
 
 type PostWithDetails = Post & { profile?: Profile; likes?: PostLike[]; like_count?: number; comment_count?: number };
 
-export function PostCard({ post, onUpdate }: { post: PostWithDetails; onUpdate: () => void }) {
+export function PostCard({ post, onUpdate, onViewProfile }: { post: PostWithDetails; onUpdate: () => void; onViewProfile?: (userId: string) => void }) {
   const { user } = useAuth();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.like_count || 0);
@@ -85,16 +85,18 @@ export function PostCard({ post, onUpdate }: { post: PostWithDetails; onUpdate: 
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <Avatar className="h-11 w-11 shrink-0">
-            <AvatarImage src={post.profile?.avatar_url ?? undefined} />
-            <AvatarFallback className="text-xs font-bold">{initials}</AvatarFallback>
-          </Avatar>
+          <button onClick={() => onViewProfile?.(post.user_id)} className="shrink-0">
+            <Avatar className="h-11 w-11 shrink-0 hover:ring-2 ring-primary/30 transition-all">
+              <AvatarImage src={post.profile?.avatar_url ?? undefined} />
+              <AvatarFallback className="text-xs font-bold">{initials}</AvatarFallback>
+            </Avatar>
+          </button>
 
           <div className="flex-1 min-w-0">
             {/* Name row */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-sm font-extrabold truncate">{post.profile?.display_name || post.profile?.username || "Unknown"}</span>
+                <button onClick={() => onViewProfile?.(post.user_id)} className="text-sm font-extrabold truncate hover:underline">{post.profile?.display_name || post.profile?.username || "Unknown"}</button>
                 <span className="text-sm text-muted-foreground truncate shrink-0">
                   @{post.profile?.username || "unknown"} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                 </span>

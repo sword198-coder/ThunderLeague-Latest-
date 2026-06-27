@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Users, MessageCircle, Loader2, Hash, TrendingUp, Dot } from "lucide-react";
+import { Users, MessageCircle, Loader2, Dot } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,7 +13,7 @@ import type { Profile, Post, PostLike } from "@/lib/types";
 
 type PostWithExtras = Post & { profile?: Profile; likes?: PostLike[]; like_count?: number; comment_count?: number };
 
-export function HomeFeed() {
+export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) => void }) {
   const { user, profile: myProfile } = useAuth();
   const [posts, setPosts] = useState<PostWithExtras[]>([]);
   const [followers, setFollowers] = useState<Profile[]>([]);
@@ -152,34 +152,13 @@ export function HomeFeed() {
           </Card>
         ) : (
           posts.map((post) => (
-            <PostCard key={post.id} post={post} onUpdate={loadPosts} />
+            <PostCard key={post.id} post={post} onUpdate={loadPosts} onViewProfile={onViewProfile} />
           ))
         )}
       </div>
 
       {/* Right sidebar — trends / chats */}
       <div className="hidden lg:flex lg:col-span-3 flex-col gap-4">
-        <Card className="border-border/40 rounded-2xl">
-          <div className="p-4 pb-2">
-            <h3 className="font-extrabold text-sm flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Trends
-            </h3>
-          </div>
-          <div className="px-4 pb-4 space-y-3">
-            {[
-              { tag: "#BPL", count: "12.5K" },
-              { tag: "#WarThunder", count: "8.2K" },
-              { tag: "#Tournament", count: "3.1K" },
-            ].map((t) => (
-              <div key={t.tag} className="group cursor-pointer">
-                <p className="text-sm font-semibold group-hover:text-primary transition-colors">{t.tag}</p>
-                <p className="text-xs text-muted-foreground">{t.count} posts</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-
         <Card className="border-border/40 rounded-2xl">
           <div className="p-4 pb-2">
             <h3 className="font-extrabold text-sm flex items-center gap-2">

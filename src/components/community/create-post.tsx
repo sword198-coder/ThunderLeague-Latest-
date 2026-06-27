@@ -6,9 +6,11 @@ import { Loader2, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 export function CreatePost({ onPostCreated }: { onPostCreated: () => void }) {
+  const { user } = useAuth();
   const [text, setText] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -24,17 +26,17 @@ export function CreatePost({ onPostCreated }: { onPostCreated: () => void }) {
   };
 
   const handlePost = async () => {
-    if (!text.trim() && !image) return;
+    if (!user || (!text.trim() && !image)) return;
     setPosting(true);
     let imageUrl: string | null = null;
 
     if (image) {
-      const path = `${Date.now()}_${image.name}`;
+      const path = `${user.id}_${Date.now()}_${image.name}`;
       const { error: uploadError } = await supabase.storage
         .from("community-posts")
         .upload(path, image);
       if (uploadError) {
-        toast.error("Failed to upload image");
+        toast.error(`Upload failed: ${uploadError.message}`);
         setPosting(false);
         return;
       }
@@ -45,11 +47,12 @@ export function CreatePost({ onPostCreated }: { onPostCreated: () => void }) {
     }
 
     const { error } = await supabase.from("posts").insert({
+      user_id: user.id,
       text: text.trim(),
       image_url: imageUrl,
     });
     setPosting(false);
-    if (error) { toast.error("Failed to create post"); return; }
+    if (error) { toast.error(`Post failed: ${error.message}`); return; }
     toast.success("Post created!");
     setText("");
     setImage(null);
@@ -85,7 +88,7 @@ export function CreatePost({ onPostCreated }: { onPostCreated: () => void }) {
             Photo
           </div>
         </label>
-        <Button onClick={handlePost} disabled={posting || (!text.trim() && !image)} size="sm">
+        <Button onClick={handlePost} disabled={posting || !user || (!text.trim() && !image)} size="sm">
           {posting && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
           Post
         </Button>
