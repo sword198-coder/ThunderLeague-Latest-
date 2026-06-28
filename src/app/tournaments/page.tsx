@@ -178,12 +178,6 @@ export default function TournamentsPage() {
   const upcoming = useMemo(() => tournaments.filter((t) => getEffectiveStatus(t) === "upcoming"), [tournaments]);
   const past = useMemo(() => tournaments.filter((t) => { const s = getEffectiveStatus(t); return s === "completed" || s === "cancelled"; }), [tournaments]);
 
-  const totalParticipants = useMemo(() => {
-    let sum = 0;
-    approvedCounts.forEach((c) => sum += c);
-    return sum;
-  }, [approvedCounts]);
-
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -211,16 +205,15 @@ export default function TournamentsPage() {
       <div
         key={t.id}
         className={cn(
-          "group relative rounded-xl border transition-all duration-300 overflow-hidden",
+          "group relative rounded-xl border transition-all duration-300 overflow-hidden bg-card",
           myStatus ? "border-primary/30" : "border-border/50",
-          isPast ? "opacity-60 hover:opacity-80" : "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
+          "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
           "hover:-translate-y-0.5"
         )}
       >
         {myStatus && (
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/[0.02] pointer-events-none" />
 
         <div className="p-5 space-y-4 relative">
           {/* Header */}
@@ -371,22 +364,7 @@ export default function TournamentsPage() {
               </div>
               <p className="text-sm text-muted-foreground/70 mt-1">Compete, prove your skill, and claim the crown</p>
             </div>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="text-center">
-                <p className="text-lg font-bold text-primary">{tournaments.length}</p>
-                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Total</p>
-              </div>
-              <div className="w-px h-8 bg-border/50" />
-              <div className="text-center">
-                <p className="text-lg font-bold text-green-500">{active.length}</p>
-                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Live</p>
-              </div>
-              <div className="w-px h-8 bg-border/50" />
-              <div className="text-center">
-                <p className="text-lg font-bold text-blue-500">{totalParticipants}</p>
-                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Players</p>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>
