@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Users, MessageCircle, Loader2, Dot } from "lucide-react";
+import { Users, Loader2, Dot } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { CreatePost } from "./create-post";
 import { PostCard } from "./post-card";
+import { ChatSidebar } from "./chat-sidebar";
 import type { Profile, Post, PostLike } from "@/lib/types";
 
 type PostWithExtras = Post & { profile?: Profile; likes?: PostLike[]; like_count?: number; comment_count?: number };
@@ -157,19 +158,9 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
         )}
       </div>
 
-      {/* Right sidebar — trends / chats */}
-      <div className="hidden lg:flex lg:col-span-3 flex-col gap-4">
-        <Card className="border-border/40 rounded-2xl">
-          <div className="p-4 pb-2">
-            <h3 className="font-extrabold text-sm flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Chats
-            </h3>
-          </div>
-          <div className="px-4 pb-4">
-            <p className="text-xs text-muted-foreground">Coming soon</p>
-          </div>
-        </Card>
+      {/* Right sidebar — chats */}
+      <div className="hidden lg:flex lg:col-span-3 flex-col gap-4 min-h-[600px]">
+        <ChatSidebar />
       </div>
     </div>
   );

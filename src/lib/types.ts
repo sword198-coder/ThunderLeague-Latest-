@@ -329,6 +329,26 @@ export type TournamentTeamMember = {
   created_at: string;
 };
 
+export type Conversation = {
+  id: string;
+  created_at: string;
+};
+
+export type ConversationParticipant = {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type Message = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  text: string;
+  created_at: string;
+};
+
 export type Follow = {
   id: string;
   follower_id: string;

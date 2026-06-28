@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Calendar, Loader2, MapPin, UserPlus, UserCheck } from "lucide-react";
+import { Calendar, Loader2, MapPin, UserPlus, UserCheck, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CreatePost } from "./create-post";
 import { PostCard } from "./post-card";
+import { NewConversationDialog } from "./new-conversation-dialog";
 import { COUNTRIES } from "@/lib/types";
 import type { Profile, Post, PostLike, CardBackground } from "@/lib/types";
 
@@ -23,6 +24,7 @@ export function ProfileSection({ viewUserId, onViewProfile }: { viewUserId?: str
   const [cardBg, setCardBg] = useState<CardBackground | null>(null);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
   const supabase = createClient();
 
   const isOwnProfile = !viewUserId || viewUserId === user?.id;
@@ -116,14 +118,23 @@ export function ProfileSection({ viewUserId, onViewProfile }: { viewUserId?: str
               {isOwnProfile ? (
                 <a href="/account"><Button variant="outline" size="sm" className="rounded-full text-xs h-8 px-4">Edit Profile</Button></a>
               ) : (
-                <Button
-                  onClick={toggleFollow}
-                  size="sm"
-                  className={`rounded-full text-xs h-8 px-4 ${following ? "bg-muted text-foreground hover:bg-destructive/10 hover:text-destructive border border-border/50" : ""}`}
-                  variant={following ? "outline" : "default"}
-                >
-                  {following ? <><UserCheck className="h-3.5 w-3.5 mr-1" /> Following</> : <><UserPlus className="h-3.5 w-3.5 mr-1" /> Follow</>}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => setShowNewChat(true)} size="sm" variant="outline" className="rounded-full text-xs h-8 px-3">
+                    <MessageCircle className="h-3.5 w-3.5 mr-1" />
+                    Message
+                  </Button>
+                  <Button
+                    onClick={toggleFollow}
+                    size="sm"
+                    className={`rounded-full text-xs h-8 px-4 ${following ? "bg-muted text-foreground hover:bg-destructive/10 hover:text-destructive border border-border/50" : ""}`}
+                    variant={following ? "outline" : "default"}
+                  >
+                    {following ? <><UserCheck className="h-3.5 w-3.5 mr-1" /> Following</> : <><UserPlus className="h-3.5 w-3.5 mr-1" /> Follow</>}
+                  </Button>
+                </div>
+              )}
+              {!isOwnProfile && (viewUserId || user?.id) && (
+                <NewConversationDialog open={showNewChat} onOpenChange={setShowNewChat} onCreated={() => setShowNewChat(false)} presetUserId={viewUserId || undefined} />
               )}
             </div>
           </div>
