@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
+import { usePushNotifications } from "@/lib/use-push-notifications";
 
 type AuthState = {
   user: User | null;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const supabaseRef = useRef<ReturnType<typeof createClient> | undefined>(undefined);
+  usePushNotifications(user?.id);
 
   const fetchProfile = async (userId: string) => {
     const sb = supabaseRef.current;

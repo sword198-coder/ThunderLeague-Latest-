@@ -52,7 +52,7 @@ export function ProfileSection({ viewUserId, onViewProfile }: { viewUserId?: str
       const commentCounts: Record<string, number> = {};
       commentsData?.forEach((c) => { commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1; });
 
-      setPosts(postsData.map((p) => ({ ...p, likes: likesData?.filter((l) => l.post_id === p.id) || [], like_count: likeCounts[p.id] || 0, comment_count: commentCounts[p.id] || 0 })));
+      setPosts(postsData.map((p) => ({ ...p, profile: prof || undefined, likes: likesData?.filter((l) => l.post_id === p.id) || [], like_count: likeCounts[p.id] || 0, comment_count: commentCounts[p.id] || 0 })));
     } else {
       setPosts([]);
     }

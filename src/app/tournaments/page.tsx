@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { JoinDialog } from "@/components/tournaments/join-dialog";
+import { TeamJoinDialog } from "@/components/tournaments/team-join-dialog";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 
 const MODE_LABELS: Record<string, string> = {
@@ -38,6 +39,7 @@ export default function TournamentsPage() {
   const [myParticipation, setMyParticipation] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [joinTournament, setJoinTournament] = useState<Tournament | null>(null);
+  const [teamJoinTournament, setTeamJoinTournament] = useState<Tournament | null>(null);
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
@@ -266,14 +268,18 @@ export default function TournamentsPage() {
                 </p>
               </div>
             ) : (
-              <Button
-                className="w-full"
-                disabled={full}
-                onClick={() => setJoinTournament(t)}
-              >
-                <Trophy className="mr-2 h-4 w-4" />
-                {full ? "Full" : "Join Tournament"}
-              </Button>
+              <div className="space-y-2">
+                <Button className="w-full" disabled={full} onClick={() => setJoinTournament(t)}>
+                  <Trophy className="mr-2 h-4 w-4" />
+                  {full ? "Full" : "Join Tournament"}
+                </Button>
+                {t.system === "4v4" && !full && (
+                  <Button variant="outline" className="w-full gap-1" onClick={() => setTeamJoinTournament(t)}>
+                    <Users className="h-4 w-4" />
+                    Join as Team
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </CardContent>
@@ -394,6 +400,14 @@ export default function TournamentsPage() {
           defaultInGameName={profile?.war_thunder_username ?? ""}
           defaultSquadron={profile?.squadron_name ?? ""}
           onSubmit={(data) => handleSubmitApplication(joinTournament.id, data)}
+        />
+      )}
+      {teamJoinTournament && (
+        <TeamJoinDialog
+          open={!!teamJoinTournament}
+          onOpenChange={(o) => { if (!o) setTeamJoinTournament(null); }}
+          tournamentId={teamJoinTournament.id}
+          tournamentTitle={teamJoinTournament.title}
         />
       )}
       </div>
