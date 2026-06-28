@@ -597,16 +597,18 @@ export default function TournamentDetailPage() {
                         Join Tournament
                         <ArrowRight className="h-4 w-4 ml-auto opacity-70" />
                       </Button>
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        disabled={joinLocked}
-                        className="w-full gap-2"
-                        onClick={() => setShowTeamJoin(true)}
-                      >
-                        <Users className="h-5 w-5" />
-                        Join as Team
-                      </Button>
+                      {tournament.system === "4v4" && (
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          disabled={joinLocked}
+                          className="w-full gap-2"
+                          onClick={() => setShowTeamJoin(true)}
+                        >
+                          <Users className="h-5 w-5" />
+                          Join as Team
+                        </Button>
+                      )}
                     </div>
                   )}
 

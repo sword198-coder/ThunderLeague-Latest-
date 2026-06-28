@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, User, Flag, HelpCircle, AlertTriangle, Trophy, BarChart3, Vote, Shield, Users } from "lucide-react";
+import { LogOut, User, Flag, HelpCircle, AlertTriangle, Trophy, BarChart3, Vote, Shield, Users, Home } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useUnseenWarnings } from "@/components/warning-alert";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ export function UserMenu() {
   const isAdmin = profile?.role === "super_admin";
 
   const navItems = [
+    { label: "Home", icon: Home, href: "/" },
     { label: "Tournaments", icon: Trophy, href: "/tournaments" },
     { label: "Leaderboard", icon: BarChart3, href: "/leaderboard" },
     { label: "Votes", icon: Vote, href: "/votes" },

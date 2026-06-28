@@ -1,19 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Search, X, UserPlus, Check, UserCheck } from "lucide-react";
+import { Loader2, Search, X, UserPlus, Flag, UserCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { WT_NATIONS } from "@/lib/types";
-
-const VEHICLES = ["Fighter", "Attacker", "Bomber", "Any"];
 
 type InvitedPlayer = {
   id: string;
@@ -84,6 +82,17 @@ export function TeamJoinDialog({
     const { error: inviteError } = await supabase.from("tournament_team_invites").insert(invites);
     if (inviteError) { toast.error(`Failed to send invites: ${inviteError.message}`); setSubmitting(false); return; }
 
+    // Send notifications with tournament link
+    const notifications = invited.map((p) => ({
+      user_id: p.id,
+      title: `Team Invite — ${tournamentTitle}`,
+      message: `${profile?.display_name || profile?.username || "Someone"} invited you to join their team in ${tournamentTitle}. Click to view.`,
+      type: "tournament",
+      link: `/tournaments/${tournamentId}`,
+      created_by: user.id,
+    }));
+    await supabase.from("notifications").insert(notifications);
+
     // Register the team leader
     const { error: memberError } = await supabase.from("tournament_team_members").insert({
       tournament_id: tournamentId,
@@ -123,27 +132,36 @@ export function TeamJoinDialog({
                 <Label className="text-xs">Squadron</Label>
                 <Input value={squadron} onChange={(e) => setSquadron(e.target.value)} placeholder="Squadron (optional)" className="h-9 text-sm" />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Nation</Label>
-                <Select value={nation || null} onValueChange={(v) => v && setNation(v)}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select nation" /></SelectTrigger>
-                  <SelectContent>
-                    {WT_NATIONS.map((n) => (
-                      <SelectItem key={n.code} value={n.code}>{n.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">Nation *</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {WT_NATIONS.map(({ code, label }) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setNation(code)}
+                      className={cn(
+                        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs border transition-colors cursor-pointer",
+                        nation === code
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                      )}
+                    >
+                      <Flag className="h-3 w-3" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Vehicle</Label>
-                <Select value={vehicle || null} onValueChange={(v) => v && setVehicle(v)}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select vehicle" /></SelectTrigger>
-                  <SelectContent>
-                    {VEHICLES.map((v) => (
-                      <SelectItem key={v} value={v}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">Vehicle *</Label>
+                <Input
+                  value={vehicle}
+                  onChange={(e) => setVehicle(e.target.value)}
+                  placeholder="e.g. Leopard 2A7V"
+                  className="h-9 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">Write the vehicle name as it appears in the game</p>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Trophy, BarChart3, Vote, MessageSquareText, Users } from "lucide-react";
+import { Trophy, BarChart3, Vote, MessageSquareText, Users, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function NavTabs() {
@@ -9,6 +9,7 @@ export function NavTabs() {
   const pathname = usePathname();
 
   const tabs = [
+    { label: "Home", icon: Home, href: "/" },
     { label: "Tournaments", icon: Trophy, href: "/tournaments" },
     { label: "Leaderboard", icon: BarChart3, href: "/leaderboard" },
     { label: "Votes", icon: Vote, href: "/votes" },
