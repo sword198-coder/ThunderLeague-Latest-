@@ -306,6 +306,29 @@ export type PostComment = {
   profile?: Profile;
 };
 
+export type TournamentTeamInvite = {
+  id: string;
+  tournament_id: string;
+  requester_id: string;
+  invitee_id: string;
+  slot_number: number;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+};
+
+export type TournamentTeamMember = {
+  id: string;
+  tournament_id: string;
+  user_id: string;
+  team_leader_id: string;
+  in_game_name: string;
+  squadron: string;
+  nation: string;
+  vehicle: string;
+  slot_number: number;
+  created_at: string;
+};
+
 export type Follow = {
   id: string;
   follower_id: string;

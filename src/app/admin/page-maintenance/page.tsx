@@ -69,9 +69,17 @@ export default function PageMaintenancePage() {
     }
   };
 
+  const ensureBucket = async () => {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.find((b) => b.id === "maintenance-images")) {
+      await supabase.storage.createBucket("maintenance-images", { public: true });
+    }
+  };
+
   const uploadImage = async () => {
     if (!imageFile) return;
     setUploading(true);
+    await ensureBucket();
     const path = `maintenance_${Date.now()}_${imageFile.name}`;
     const { error: uploadError } = await supabase.storage.from("maintenance-images").upload(path, imageFile);
     if (uploadError) { toast.error(`Upload failed: ${uploadError.message}`); setUploading(false); return; }

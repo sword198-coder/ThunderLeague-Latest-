@@ -12,11 +12,13 @@ import type { Tournament, TournamentMatch, TournamentParticipant } from "@/lib/t
 import { WT_NATIONS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 const TournamentChat = dynamic(() => import("@/components/tournament-chat").then((m) => m.TournamentChat), { ssr: false });
 import { JoinDialog } from "@/components/tournaments/join-dialog";
+import { TeamJoinDialog } from "@/components/tournaments/team-join-dialog";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import type { ReactNode } from "react";
 
@@ -81,6 +83,9 @@ export default function TournamentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [showTeamJoin, setShowTeamJoin] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [inviteProfiles, setInviteProfiles] = useState<Record<string, any>>({});
   const [joining, setJoining] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
 
@@ -194,6 +199,28 @@ export default function TournamentDetailPage() {
         .eq("tournament_id", id)
         .eq("visible", true);
       setMediaLinks(mediaData ?? []);
+
+      // Fetch pending team invites for current user
+      if (user) {
+        const { data: inviteData } = await supabase
+          .from("tournament_team_invites")
+          .select("*")
+          .eq("tournament_id", id)
+          .eq("invitee_id", user.id)
+          .eq("status", "pending");
+        setPendingInvites(inviteData ?? []);
+
+        if (inviteData && inviteData.length > 0) {
+          const reqIds = inviteData.map((inv) => inv.requester_id);
+          const { data: reqProfiles } = await supabase
+            .from("profiles")
+            .select("id, username, display_name, avatar_url")
+            .in("id", reqIds);
+          const pmap: Record<string, any> = {};
+          (reqProfiles ?? []).forEach((p) => { pmap[p.id] = p; });
+          setInviteProfiles(pmap);
+        }
+      }
 
       setLoading(false);
     };
@@ -570,6 +597,16 @@ export default function TournamentDetailPage() {
                         Join Tournament
                         <ArrowRight className="h-4 w-4 ml-auto opacity-70" />
                       </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        disabled={joinLocked}
+                        className="w-full gap-2"
+                        onClick={() => setShowTeamJoin(true)}
+                      >
+                        <Users className="h-5 w-5" />
+                        Join as Team
+                      </Button>
                     </div>
                   )}
 
@@ -586,6 +623,59 @@ export default function TournamentDetailPage() {
                       <CheckCircle2 className="h-6 w-6 text-green-400 mx-auto mb-2" />
                       <p className="text-sm font-semibold text-green-400">You&apos;re In!</p>
                       <p className="text-xs text-muted-foreground/70 mt-1">Good luck in the tournament</p>
+                    </div>
+                  )}
+
+                  {pendingInvites.length > 0 && (
+                    <div className="w-full max-w-xs space-y-3 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                      <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-2">
+                        <Users className="h-3.5 w-3.5" /> Team Invites
+                      </h4>
+                      {pendingInvites.map((inv) => {
+                        const invProf = inviteProfiles[inv.requester_id];
+                        return (
+                          <div key={inv.id} className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10">
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage src={invProf?.avatar_url ?? undefined} />
+                              <AvatarFallback className="text-[10px]">{(invProf?.display_name || invProf?.username || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{invProf?.display_name || invProf?.username || "Unknown"}</p>
+                              <p className="text-[10px] text-muted-foreground">Slot #{inv.slot_number}</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("tournament_team_invites")
+                                    .update({ status: "accepted" })
+                                    .eq("id", inv.id);
+                                  if (error) toast.error(error.message);
+                                  else { toast.success("Invite accepted!"); setPendingInvites((prev) => prev.filter((i) => i.id !== inv.id)); window.location.reload(); }
+                                }}
+                                className="p-1 rounded-full hover:bg-green-500/20 text-green-400 transition-colors"
+                                title="Accept"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from("tournament_team_invites")
+                                    .update({ status: "rejected" })
+                                    .eq("id", inv.id);
+                                  if (error) toast.error(error.message);
+                                  else { toast.success("Invite rejected"); setPendingInvites((prev) => prev.filter((i) => i.id !== inv.id)); }
+                                }}
+                                className="p-1 rounded-full hover:bg-red-500/20 text-red-400 transition-colors"
+                                title="Reject"
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -923,6 +1013,12 @@ export default function TournamentDetailPage() {
         defaultSquadron={profile?.squadron_name ?? ""}
         defaultCountry={profile?.nationality ?? ""}
         onSubmit={handleJoin}
+      />
+      <TeamJoinDialog
+        open={showTeamJoin}
+        onOpenChange={setShowTeamJoin}
+        tournamentId={tournament.id}
+        tournamentTitle={tournament.title}
       />
     </div>
     </MaintenanceGuard>

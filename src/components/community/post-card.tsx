@@ -59,7 +59,7 @@ export function PostCard({ post, onUpdate, onViewProfile }: { post: PostWithDeta
       setLiked(false);
       setLikeCount((c) => Math.max(0, c - 1));
     } else {
-      await supabase.from("post_likes").insert({ post_id: post.id });
+      await supabase.from("post_likes").insert({ post_id: post.id, user_id: user.id });
       setLiked(true);
       setLikeCount((c) => c + 1);
     }

@@ -176,13 +176,13 @@ export function SignUpForm() {
   const onSubmitProfile = async (data: ProfileData) => {
     const { error } = await supabase
       .from("profiles")
-      .update({
+      .upsert({
+        id: userId,
         war_thunder_username: data.war_thunder_username,
         squadron_name: data.squadron_name,
         discord_username: data.discord_username,
         nationality: data.nationality,
-      })
-      .eq("id", userId);
+      });
 
     if (error) {
       toast.error("Failed to save profile details");

@@ -21,10 +21,21 @@ export function CommentSection({ postId }: { postId: string }) {
   const load = async () => {
     const { data } = await supabase
       .from("post_comments")
-      .select("id, post_id, user_id, text, created_at, profile:profiles!user_id(avatar_url, display_name, username)")
+      .select("id, post_id, user_id, text, created_at")
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
-    if (data) setComments(data as any);
+
+    if (data && data.length > 0) {
+      const userIds = [...new Set(data.map((c) => c.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, avatar_url, display_name, username")
+        .in("id", userIds);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+      setComments(data.map((c) => ({ ...c, profile: profileMap.get(c.user_id) })) as any);
+    } else {
+      setComments([]);
+    }
     setLoading(false);
   };
 
@@ -33,9 +44,9 @@ export function CommentSection({ postId }: { postId: string }) {
   const sendComment = async () => {
     if (!text.trim() || !user) return;
     setSending(true);
-    const { error } = await supabase.from("post_comments").insert({ post_id: postId, text: text.trim() });
+    const { error } = await supabase.from("post_comments").insert({ user_id: user.id, post_id: postId, text: text.trim() });
     setSending(false);
-    if (error) return;
+    if (error) { return; }
     setText("");
     load();
   };

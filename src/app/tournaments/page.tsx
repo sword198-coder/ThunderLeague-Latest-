@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Trophy, Calendar, Swords, Users, Clock, Check, LogIn, Hourglass, X, ExternalLink, Plus } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
@@ -374,6 +375,12 @@ export default function TournamentsPage() {
                         You {myStatus === "approved" ? "participated" : myStatus === "pending" ? "had applied" : "were rejected"}
                       </Badge>
                     )}
+                    <Link
+                      href={`/tournaments/${t.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors pt-1"
+                    >
+                      View Tournament &rarr;
+                    </Link>
                   </CardContent>
                 </Card>
               );

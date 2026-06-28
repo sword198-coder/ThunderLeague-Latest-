@@ -226,7 +226,8 @@ export default function AccountPage() {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({
+      .upsert({
+        id: user.id,
         display_name: displayName || null,
         war_thunder_username: wtUsername || null,
         squadron_name: squadron || null,
@@ -235,8 +236,7 @@ export default function AccountPage() {
         play_countries: countries,
         play_tiers: tiers,
         play_mode: playMode,
-      })
-      .eq("id", user.id);
+      });
 
     if (error) {
       toast.error("Failed to update profile: " + error.message);
