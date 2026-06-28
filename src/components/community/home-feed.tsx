@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { Users, Loader2, Dot } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { CreatePost } from "./create-post";
 import { PostCard } from "./post-card";
-import { ChatSidebar } from "./chat-sidebar";
+import { FloatingChat } from "./floating-chat";
 import type { Profile, Post, PostLike } from "@/lib/types";
 
 type PostWithExtras = Post & { profile?: Profile; likes?: PostLike[]; like_count?: number; comment_count?: number };
@@ -18,7 +17,7 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
   const { user, profile: myProfile } = useAuth();
   const [posts, setPosts] = useState<PostWithExtras[]>([]);
   const [followers, setFollowers] = useState<Profile[]>([]);
-  const [onlineCount, setOnlineCount] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -68,7 +67,7 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
     if (followerIds.length > 0) {
       const { data: followerProfiles } = await supabase.from("profiles").select("id, username, display_name, avatar_url, last_active_at").in("id", followerIds);
       setFollowers((followerProfiles || []) as Profile[]);
-      setOnlineCount((followerProfiles || []).filter((p: any) => p.last_active_at && Date.now() - new Date(p.last_active_at).getTime() < 300000).length);
+
     }
 
     setLoading(false);
@@ -83,9 +82,9 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
   const myInitials = myProfile?.display_name?.slice(0, 2).toUpperCase() || myProfile?.username?.slice(0, 2).toUpperCase() || "?";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-10 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* Left sidebar — profile card + followers */}
-      <div className="hidden lg:flex lg:col-span-3 flex-col gap-4">
+      <div className="hidden lg:flex lg:col-span-4 flex-col gap-4">
         {/* Mini profile card */}
         <Card className="border-border/40 rounded-2xl overflow-hidden">
           <div className="h-16 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent" />
@@ -114,11 +113,11 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
             {followers.length === 0 ? (
               <p className="text-xs text-muted-foreground">No followers yet</p>
             ) : (
-              followers.slice(0, 6).map((f) => (
-                <div key={f.id} className="flex items-center gap-2.5">
-                  <Avatar className="h-9 w-9 shrink-0">
+              followers.slice(0, 8).map((f) => (
+                <button key={f.id} onClick={() => onViewProfile?.(f.id)} className="flex items-center gap-2.5 w-full text-left">
+                  <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src={f.avatar_url ?? undefined} />
-                    <AvatarFallback className="text-[10px]">{((f.display_name || f.username || "") as string).slice(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="text-[9px]">{((f.display_name || f.username || "") as string).slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-tight truncate">{f.display_name || f.username}</p>
@@ -131,7 +130,7 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
                       </p>
                     </div>
                   </div>
-                </div>
+                </button>
               ))
             )}
             {followers.length > 6 && (
@@ -142,7 +141,7 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
       </div>
 
       {/* Center — Feed */}
-      <div className="lg:col-span-4 space-y-3">
+      <div className="lg:col-span-8 space-y-3">
         <CreatePost onPostCreated={loadPosts} />
 
         {posts.length === 0 ? (
@@ -158,10 +157,7 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
         )}
       </div>
 
-      {/* Right sidebar — chats */}
-      <div className="hidden lg:flex lg:col-span-3 flex-col gap-4 min-h-[600px]">
-        <ChatSidebar />
-      </div>
+      <FloatingChat />
     </div>
   );
 }
