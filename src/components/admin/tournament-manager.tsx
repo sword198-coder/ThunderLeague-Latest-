@@ -56,6 +56,7 @@ type FormData = z.infer<typeof schema>;
 
 type ParticipantInfo = {
   id: string;
+  user_id: string;
   username: string;
   display_name: string | null;
   status: string;
@@ -87,6 +88,7 @@ export function TournamentManager() {
     tournamentTitle: string;
     participants: ParticipantInfo[];
   } | null>(null);
+  const [teamMemberMap, setTeamMemberMap] = useState<Record<string, { team_leader_id: string; slot_number: number }>>({});
   const [manageTournament, setManageTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<{ id: string; name: string }[]>([]);
@@ -240,6 +242,7 @@ export function TournamentManager() {
       const prof = profileMap.get(p.user_id);
       return {
         id: p.id,
+        user_id: p.user_id,
         username: prof?.username ?? "unknown",
         display_name: prof?.display_name ?? null,
         status: p.status,
@@ -249,6 +252,15 @@ export function TournamentManager() {
         vehicle: p.vehicle,
       };
     });
+
+    // Load team members for this tournament
+    const { data: tmData } = await supabase
+      .from("tournament_team_members")
+      .select("user_id, team_leader_id, slot_number")
+      .eq("tournament_id", t.id);
+    const tmMap: Record<string, { team_leader_id: string; slot_number: number }> = {};
+    (tmData ?? []).forEach((tm) => { tmMap[tm.user_id] = { team_leader_id: tm.team_leader_id, slot_number: tm.slot_number }; });
+    setTeamMemberMap(tmMap);
 
     setParticipantsDialog({ tournamentId: t.id, tournamentTitle: t.title, participants });
   };
@@ -1160,6 +1172,12 @@ export function TournamentManager() {
                       {p.display_name || p.username}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">@{p.username}</span>
+                    {teamMemberMap[p.user_id] && (
+                      <Badge variant="outline" className="ml-2 text-xs border-blue-500/30 bg-blue-500/10 text-blue-400">
+                        <Users className="h-3 w-3 mr-0.5" />
+                        Team{teamMemberMap[p.user_id].slot_number > 1 ? ` #${teamMemberMap[p.user_id].slot_number}` : " Lead"}
+                      </Badge>
+                    )}
                     <Badge variant="outline" className={`ml-2 text-xs ${partStatusBadge(p.status)}`}>
                       {p.status}
                     </Badge>

@@ -86,6 +86,7 @@ export default function TournamentDetailPage() {
   const [showTeamJoin, setShowTeamJoin] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [inviteProfiles, setInviteProfiles] = useState<Record<string, any>>({});
+  const [teamMembers, setTeamMembers] = useState<Record<string, { team_leader_id: string; slot_number: number }>>({});
   const [joining, setJoining] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
 
@@ -199,6 +200,15 @@ export default function TournamentDetailPage() {
         .eq("tournament_id", id)
         .eq("visible", true);
       setMediaLinks(mediaData ?? []);
+
+      // Fetch team members for this tournament
+      const { data: tmData } = await supabase
+        .from("tournament_team_members")
+        .select("user_id, team_leader_id, slot_number")
+        .eq("tournament_id", id);
+      const tmMap: Record<string, { team_leader_id: string; slot_number: number }> = {};
+      (tmData ?? []).forEach((tm) => { tmMap[tm.user_id] = { team_leader_id: tm.team_leader_id, slot_number: tm.slot_number }; });
+      setTeamMembers(tmMap);
 
       // Fetch pending team invites for current user
       if (user) {
@@ -516,17 +526,25 @@ export default function TournamentDetailPage() {
                         <p className="text-sm font-medium truncate">{p.name}</p>
                         <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
                       </div>
-                      <Badge variant="outline" className={cn(
-                        "text-xs shrink-0 border-0 font-medium",
-                        p.status === "approved" ? "bg-green-500/10 text-green-500" :
-                        p.status === "pending" ? "bg-yellow-500/10 text-yellow-500" :
-                        "bg-red-500/10 text-red-500"
-                      )}>
-                        <span className="flex items-center gap-1">
-                          {statusIcon(p.status)}
-                          {p.status}
-                        </span>
-                      </Badge>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {teamMembers[p.user_id] && (
+                          <Badge variant="outline" className="text-xs border-blue-500/30 bg-blue-500/10 text-blue-400 font-medium">
+                            <Users className="h-3 w-3 mr-0.5" />
+                            Team{teamMembers[p.user_id].slot_number > 1 ? ` #${teamMembers[p.user_id].slot_number}` : " Lead"}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className={cn(
+                          "text-xs border-0 font-medium",
+                          p.status === "approved" ? "bg-green-500/10 text-green-500" :
+                          p.status === "pending" ? "bg-yellow-500/10 text-yellow-500" :
+                          "bg-red-500/10 text-red-500"
+                        )}>
+                          <span className="flex items-center gap-1">
+                            {statusIcon(p.status)}
+                            {p.status}
+                          </span>
+                        </Badge>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -652,8 +670,32 @@ export default function TournamentDetailPage() {
                                     .from("tournament_team_invites")
                                     .update({ status: "accepted" })
                                     .eq("id", inv.id);
-                                  if (error) toast.error(error.message);
-                                  else { toast.success("Invite accepted!"); setPendingInvites((prev) => prev.filter((i) => i.id !== inv.id)); window.location.reload(); }
+                                  if (error) { toast.error(error.message); return; }
+                                  // Register as team member
+                                  await supabase.from("tournament_team_members").insert({
+                                    tournament_id: tournament.id,
+                                    user_id: user?.id,
+                                    team_leader_id: inv.requester_id,
+                                    in_game_name: profile?.war_thunder_username || "",
+                                    squadron: profile?.squadron_name || "",
+                                    nation: profile?.nationality || "",
+                                    vehicle: "",
+                                    slot_number: inv.slot_number,
+                                  });
+                                  // Add as tournament participant
+                                  await supabase.from("tournament_participants").upsert({
+                                    tournament_id: tournament.id,
+                                    user_id: user?.id,
+                                    in_game_name: profile?.war_thunder_username || "",
+                                    squadron: profile?.squadron_name || "",
+                                    country: profile?.nationality || "",
+                                    vehicle: "",
+                                    status: "pending",
+                                    accepted_terms: true,
+                                  }, { onConflict: "tournament_id, user_id" });
+                                  toast.success("Invite accepted!");
+                                  setPendingInvites((prev) => prev.filter((i) => i.id !== inv.id));
+                                  window.location.reload();
                                 }}
                                 className="p-1 rounded-full hover:bg-green-500/20 text-green-400 transition-colors"
                                 title="Accept"

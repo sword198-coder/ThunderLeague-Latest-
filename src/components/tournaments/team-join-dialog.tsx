@@ -71,30 +71,40 @@ export function TeamJoinDialog({
     if (!user || invited.length === 0) return;
     setSubmitting(true);
 
-    // Create invites for each invited player
-    const invites = invited.map((p, i) => ({
-      tournament_id: tournamentId,
-      requester_id: user.id,
-      invitee_id: p.id,
-      slot_number: i + 2,
-    }));
+    // Check which invitees already have existing invites
+    const { data: existingInvites } = await supabase
+      .from("tournament_team_invites")
+      .select("invitee_id")
+      .eq("tournament_id", tournamentId)
+      .in("invitee_id", invited.map((p) => p.id));
+    const existingIds = new Set((existingInvites ?? []).map((i) => i.invitee_id));
+    const newInvites = invited.filter((p) => !existingIds.has(p.id));
 
-    const { error: inviteError } = await supabase.from("tournament_team_invites").insert(invites);
-    if (inviteError) { toast.error(`Failed to send invites: ${inviteError.message}`); setSubmitting(false); return; }
+    if (newInvites.length > 0) {
+      const invites = newInvites.map((p, i) => ({
+        tournament_id: tournamentId,
+        requester_id: user.id,
+        invitee_id: p.id,
+        slot_number: i + 2,
+      }));
 
-    // Send notifications with tournament link
-    const notifications = invited.map((p) => ({
-      user_id: p.id,
-      title: `Team Invite — ${tournamentTitle}`,
-      message: `${profile?.display_name || profile?.username || "Someone"} invited you to join their team in ${tournamentTitle}. Click to view.`,
-      type: "tournament",
-      link: `/tournaments/${tournamentId}`,
-      created_by: user.id,
-    }));
-    await supabase.from("notifications").insert(notifications);
+      const { error: inviteError } = await supabase.from("tournament_team_invites").insert(invites);
+      if (inviteError) { toast.error(`Failed to send invites: ${inviteError.message}`); setSubmitting(false); return; }
 
-    // Register the team leader
-    const { error: memberError } = await supabase.from("tournament_team_members").insert({
+      // Send notifications with tournament link
+      const notifications = newInvites.map((p) => ({
+        user_id: p.id,
+        title: `Team Invite — ${tournamentTitle}`,
+        message: `${profile?.display_name || profile?.username || "Someone"} invited you to join their team in ${tournamentTitle}. Click to view.`,
+        type: "tournament",
+        link: `/tournaments/${tournamentId}`,
+        created_by: user.id,
+      }));
+      await supabase.from("notifications").insert(notifications);
+    }
+
+    // Register the team leader in tournament_team_members
+    const { error: memberError } = await supabase.from("tournament_team_members").upsert({
       tournament_id: tournamentId,
       user_id: user.id,
       team_leader_id: user.id,
@@ -103,11 +113,24 @@ export function TeamJoinDialog({
       nation,
       vehicle,
       slot_number: 1,
-    });
+    }, { onConflict: "tournament_id, user_id" });
     if (memberError) { toast.error(`Failed to register: ${memberError.message}`); setSubmitting(false); return; }
 
+    // Also add as tournament participant so admin can see the application
+    const { error: partError } = await supabase.from("tournament_participants").upsert({
+      tournament_id: tournamentId,
+      user_id: user.id,
+      in_game_name: inGameName.trim(),
+      squadron: squadron.trim(),
+      country: nation,
+      vehicle: vehicle.trim(),
+      status: "pending",
+      accepted_terms: true,
+    }, { onConflict: "tournament_id, user_id" });
+    if (partError) { toast.error(`Failed to register: ${partError.message}`); setSubmitting(false); return; }
+
     setSubmitting(false);
-    toast.success(`Invites sent! ${invited.length} player(s) notified.`);
+    toast.success(`Invites sent! ${newInvites.length} player(s) notified.`);
     onOpenChange(false);
   };
 
