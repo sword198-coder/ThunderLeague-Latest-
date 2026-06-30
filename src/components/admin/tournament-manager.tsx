@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell, MessageCircle, Eye, EyeOff, Lock, Unlock, Upload, Image as ImageIcon, Shuffle } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Users, Check, X, Swords, Bell, MessageCircle, Eye, EyeOff, Lock, Unlock, Upload, Image as ImageIcon, Shuffle, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -35,8 +35,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-const schema = z.object({
+import { cn } from "@/lib/utils";
+ 
+ const schema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().optional(),
   mode: z.enum(["air", "ground", "both"]),
@@ -53,6 +54,17 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+const TEAM_COLOR_CYCLES = [
+  { border: "border-blue-500/30", bg: "bg-blue-500/10", text: "text-blue-500" },
+  { border: "border-red-500/30", bg: "bg-red-500/10", text: "text-red-500" },
+  { border: "border-green-500/30", bg: "bg-green-500/10", text: "text-green-500" },
+  { border: "border-orange-500/30", bg: "bg-orange-500/10", text: "text-orange-500" },
+  { border: "border-purple-500/30", bg: "bg-purple-500/10", text: "text-purple-500" },
+  { border: "border-cyan-500/30", bg: "bg-cyan-500/10", text: "text-cyan-500" },
+  { border: "border-pink-500/30", bg: "bg-pink-500/10", text: "text-pink-500" },
+  { border: "border-yellow-500/30", bg: "bg-yellow-500/10", text: "text-yellow-500" },
+];
 
 type ParticipantInfo = {
   id: string;
@@ -89,6 +101,12 @@ export function TournamentManager() {
     participants: ParticipantInfo[];
   } | null>(null);
   const [teamMemberMap, setTeamMemberMap] = useState<Record<string, { team_leader_id: string; slot_number: number }>>({});
+  const teamColorIndex = useMemo(() => {
+    const uniqueLeaders = [...new Set(Object.values(teamMemberMap).map((tm) => tm.team_leader_id))].sort();
+    const idx: Record<string, number> = {};
+    uniqueLeaders.forEach((leaderId, i) => { idx[leaderId] = i % TEAM_COLOR_CYCLES.length; });
+    return idx;
+  }, [teamMemberMap]);
   const [manageTournament, setManageTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<TournamentMatch[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<{ id: string; name: string }[]>([]);
@@ -1164,18 +1182,21 @@ export function TournamentManager() {
             </DialogTitle>
           </DialogHeader>
           <div className="max-h-96 overflow-y-auto space-y-3">
-            {participantsDialog?.participants.map((p) => (
-              <div key={p.id} className="p-3 rounded bg-muted/50 space-y-1">
+            {participantsDialog?.participants.map((p) => {
+              const tm = teamMemberMap[p.user_id];
+              const tc = tm ? TEAM_COLOR_CYCLES[teamColorIndex[tm.team_leader_id] ?? 0] : null;
+              return (
+              <div key={p.id} className={cn("p-3 rounded space-y-1 border", tc ? `${tc.border}` : "bg-muted/50 border-transparent")}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold">
+                    <span className={cn("text-sm font-semibold", tc && tc.text)}>
                       {p.display_name || p.username}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">@{p.username}</span>
-                    {teamMemberMap[p.user_id] && (
-                      <Badge variant="outline" className="ml-2 text-xs border-blue-500/30 bg-blue-500/10 text-blue-400">
-                        <Users className="h-3 w-3 mr-0.5" />
-                        Team{teamMemberMap[p.user_id].slot_number > 1 ? ` #${teamMemberMap[p.user_id].slot_number}` : " Lead"}
+                    {tm && (
+                      <Badge variant="outline" className={cn("ml-2 text-xs", tc ? `${tc.border} ${tc.bg} ${tc.text}` : "border-blue-500/30 bg-blue-500/10 text-blue-400")}>
+                        <Shield className="h-3 w-3 mr-0.5" />
+                        {tm.slot_number === 1 ? "Lead" : `#${tm.slot_number}`}
                       </Badge>
                     )}
                     <Badge variant="outline" className={`ml-2 text-xs ${partStatusBadge(p.status)}`}>
@@ -1200,7 +1221,8 @@ export function TournamentManager() {
                   {p.vehicle && <div className="col-span-2"><span className="font-medium text-foreground/70">Vehicle:</span> {p.vehicle}</div>}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </DialogContent>
       </Dialog>

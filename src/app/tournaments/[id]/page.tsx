@@ -35,6 +35,17 @@ const PLATFORM_ICONS: Record<string, ReactNode> = {
   website: <Globe className="h-3.5 w-3.5" />,
 };
 
+const TEAM_COLOR_CYCLES = [
+  { border: "border-blue-500/30", bg: "bg-blue-500/10", text: "text-blue-400", ring: "ring-blue-500/30", lightBg: "bg-blue-500/[0.04]" },
+  { border: "border-red-500/30", bg: "bg-red-500/10", text: "text-red-400", ring: "ring-red-500/30", lightBg: "bg-red-500/[0.04]" },
+  { border: "border-green-500/30", bg: "bg-green-500/10", text: "text-green-400", ring: "ring-green-500/30", lightBg: "bg-green-500/[0.04]" },
+  { border: "border-orange-500/30", bg: "bg-orange-500/10", text: "text-orange-400", ring: "ring-orange-500/30", lightBg: "bg-orange-500/[0.04]" },
+  { border: "border-purple-500/30", bg: "bg-purple-500/10", text: "text-purple-400", ring: "ring-purple-500/30", lightBg: "bg-purple-500/[0.04]" },
+  { border: "border-cyan-500/30", bg: "bg-cyan-500/10", text: "text-cyan-400", ring: "ring-cyan-500/30", lightBg: "bg-cyan-500/[0.04]" },
+  { border: "border-pink-500/30", bg: "bg-pink-500/10", text: "text-pink-400", ring: "ring-pink-500/30", lightBg: "bg-pink-500/[0.04]" },
+  { border: "border-yellow-500/30", bg: "bg-yellow-500/10", text: "text-yellow-400", ring: "ring-yellow-500/30", lightBg: "bg-yellow-500/[0.04]" },
+];
+
 const PLATFORM_COLORS: Record<string, string> = {
   youtube: "hover:bg-red-500/20 hover:text-red-500 border-red-500/30 text-red-400",
   tiktok: "hover:bg-pink-500/20 hover:text-pink-500 border-pink-500/30 text-pink-400",
@@ -282,6 +293,10 @@ export default function TournamentDetailPage() {
   const rounds = [...new Set(matches.map((m) => m.round))].sort();
   const profileMap = new Map(participants.map((p) => [p.user_id, { name: p.name, username: p.username, avatar_url: p.avatar_url, country: p.country, vehicle: p.vehicle }]));
   extraProfilesRef.current.forEach((v, k) => { if (!profileMap.has(k)) profileMap.set(k, v); });
+  // Assign team colors deterministicly
+  const uniqueTeamLeaders = [...new Set(Object.values(teamMembers).map((tm) => tm.team_leader_id))].sort();
+  const teamColorIndex: Record<string, number> = {};
+  uniqueTeamLeaders.forEach((leaderId, i) => { teamColorIndex[leaderId] = i % TEAM_COLOR_CYCLES.length; });
   const approvedCount = participants.filter((p) => p.status === "approved").length;
   const isParticipant = participants.some((p) => p.user_id === user?.id);
   const isApproved = participants.some((p) => p.user_id === user?.id && p.status === "approved");
@@ -498,39 +513,47 @@ export default function TournamentDetailPage() {
               </CardHeader>
               <CardContent className={cn(participants.length > 0 && "max-h-[500px] overflow-y-auto space-y-2 pr-1")}>
                 {participants.length > 0 ? (
-                  participants.map((p) => (
+                  participants.map((p) => {
+                    const tm = teamMembers[p.user_id];
+                    const tc = tm ? TEAM_COLOR_CYCLES[teamColorIndex[tm.team_leader_id] ?? 0] : null;
+                    return (
                     <div
                       key={p.id}
                       className={cn(
                         "flex items-center gap-3 p-3 rounded-lg border transition-colors",
-                        p.status === "approved" ? "border-green-500/20 bg-green-500/[0.03] hover:bg-green-500/[0.06]" :
-                        p.status === "pending" ? "border-yellow-500/20 bg-yellow-500/[0.03] hover:bg-yellow-500/[0.06]" :
-                        "border-red-500/20 bg-red-500/[0.03] hover:bg-red-500/[0.06]"
+                        tc ? `${tc.border} ${tc.lightBg}` :
+                        p.status === "approved" ? "border-green-500/20 bg-green-500/[0.03]" :
+                        p.status === "pending" ? "border-yellow-500/20 bg-yellow-500/[0.03]" :
+                        "border-red-500/20 bg-red-500/[0.03]"
                       )}
                     >
                       {p.avatar_url ? (
-                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-border/50 relative">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full overflow-hidden shrink-0 relative",
+                          tc ? `${tc.ring} ring-2` : "ring-2 ring-border/50"
+                        )}>
                           <Image src={p.avatar_url} alt={p.name} fill className="object-cover" unoptimized />
                         </div>
                       ) : (
                         <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ring-2 ring-border/50",
-                          p.status === "approved" ? "bg-green-500/20 text-green-500" :
-                          p.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
-                          "bg-red-500/20 text-red-500"
+                          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ring-2",
+                          tc ? `${tc.ring} ${tc.bg} ${tc.text}` :
+                          p.status === "approved" ? "ring-green-500/30 bg-green-500/20 text-green-500" :
+                          p.status === "pending" ? "ring-yellow-500/30 bg-yellow-500/20 text-yellow-500" :
+                          "ring-red-500/30 bg-red-500/20 text-red-500"
                         )}>
                           {p.name.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <p className={cn("text-sm font-medium truncate", tc && tc.text)}>{p.name}</p>
                         <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {teamMembers[p.user_id] && (
-                          <Badge variant="outline" className="text-xs border-blue-500/30 bg-blue-500/10 text-blue-400 font-medium">
+                        {tm && (
+                          <Badge variant="outline" className={cn("text-xs font-medium", tc ? `${tc.border} ${tc.bg} ${tc.text}` : "border-blue-500/30 bg-blue-500/10 text-blue-400")}>
                             <Users className="h-3 w-3 mr-0.5" />
-                            Team{teamMembers[p.user_id].slot_number > 1 ? ` #${teamMembers[p.user_id].slot_number}` : " Lead"}
+                            {tm.slot_number === 1 ? "Lead" : `#${tm.slot_number}`}
                           </Badge>
                         )}
                         <Badge variant="outline" className={cn(
@@ -546,7 +569,8 @@ export default function TournamentDetailPage() {
                         </Badge>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="py-12 text-center">
                     <Users className="h-12 w-12 mx-auto text-muted-foreground/20 mb-3" />
