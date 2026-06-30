@@ -426,15 +426,7 @@ export default function TournamentsPage() {
         {/* Past */}
         {past.length > 0 && (
           <section>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2 rounded-lg bg-muted/50">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold">History</h2>
-                <p className="text-xs text-muted-foreground/60">{past.length} past tournament{past.length > 1 ? "s" : ""}</p>
-              </div>
-            </div>
+            <h2 className="text-sm font-semibold text-muted-foreground/60 uppercase tracking-wider mb-4">Completed &amp; Cancelled</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {past.map(renderTournamentCard)}
             </div>
