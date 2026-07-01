@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
 import { Trophy, Swords, BarChart3, Info, Crown } from "lucide-react";
@@ -48,29 +49,49 @@ export function LeaderboardClient({
     setLiveProfiles(profiles);
   }, [profiles]);
 
+  const { data: bgData } = useQuery({
+    queryKey: ["card_backgrounds"],
+    queryFn: async () => {
+      const { data } = await supabase.from("card_backgrounds").select("*");
+      return (data ?? []) as CardBackground[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  useEffect(() => { if (bgData) setBackgrounds(bgData); }, [bgData]);
+
+  const { data: titleData } = useQuery({
+    queryKey: ["card_titles"],
+    queryFn: async () => {
+      const { data } = await supabase.from("card_titles").select("*");
+      return (data ?? []) as CardTitle[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  useEffect(() => { if (titleData) setTitles(titleData); }, [titleData]);
+
+  const { data: myProfileData } = useQuery({
+    queryKey: ["my_profile", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      return data as Profile | null;
+    },
+    enabled: !!user,
+    staleTime: 60 * 1000,
+  });
   useEffect(() => {
-    supabase.from("card_backgrounds").select("*").then(({ data }) => {
-      if (data) setBackgrounds(data as CardBackground[]);
-    });
-    supabase.from("card_titles").select("*").then(({ data }) => {
-      if (data) setTitles(data as CardTitle[]);
-    });
-    if (user) {
-      supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
-        if (data) {
-          setLiveProfiles((prev) => {
-            const idx = prev.findIndex((p) => p.id === user.id);
-            if (idx >= 0) {
-              const copy = [...prev];
-              copy[idx] = data as Profile;
-              return copy;
-            }
-            return [...prev, data as Profile];
-          });
+    if (myProfileData) {
+      setLiveProfiles((prev) => {
+        const idx = prev.findIndex((p) => p.id === user!.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = myProfileData;
+          return copy;
         }
+        return [...prev, myProfileData];
       });
     }
-  }, [user]);
+  }, [myProfileData, user]);
 
   const bgMap = useMemo(() => {
     const map = new Map<string, CardBackground>();
