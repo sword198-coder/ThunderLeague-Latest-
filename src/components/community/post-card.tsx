@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import Image from "next/image";
 import { Heart, MessageCircle, Trash2, Share, UserPlus, UserCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -13,7 +13,7 @@ import type { Post, Profile, PostLike } from "@/lib/types";
 
 type PostWithDetails = Post & { profile?: Profile; likes?: PostLike[]; like_count?: number; comment_count?: number };
 
-export function PostCard({ post, onUpdate, onViewProfile }: { post: PostWithDetails; onUpdate: () => void; onViewProfile?: (userId: string) => void }) {
+export const PostCard = memo(function PostCard({ post, onUpdate, onViewProfile }: { post: PostWithDetails; onUpdate: () => void; onViewProfile?: (userId: string) => void }) {
   const { user } = useAuth();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.like_count || 0);
@@ -171,4 +171,4 @@ export function PostCard({ post, onUpdate, onViewProfile }: { post: PostWithDeta
       )}
     </Card>
   );
-}
+});
