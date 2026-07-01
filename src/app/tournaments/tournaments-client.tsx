@@ -9,12 +9,14 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import type { Tournament } from "@/lib/types";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { JoinDialog } from "@/components/tournaments/join-dialog";
-import { TeamJoinDialog } from "@/components/tournaments/team-join-dialog";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+
+const JoinDialog = dynamic(() => import("@/components/tournaments/join-dialog").then((m) => m.JoinDialog), { ssr: false });
+const TeamJoinDialog = dynamic(() => import("@/components/tournaments/team-join-dialog").then((m) => m.TeamJoinDialog), { ssr: false });
 
 const MODE_LABELS: Record<string, string> = {
   air: "Air",

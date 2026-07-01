@@ -13,8 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { PlayerCard } from "@/components/leaderboard/player-card";
+
+const PlayerCard = dynamic(() => import("@/components/leaderboard/player-card").then((m) => m.PlayerCard), { ssr: false });
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { MaintenanceGuard } from "@/components/maintenance-guard";

@@ -6,11 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { CreatePost } from "./create-post";
 import { PostCard } from "./post-card";
-import { FloatingChat } from "./floating-chat";
 import type { Profile, Post, PostLike } from "@/lib/types";
+
+const FloatingChat = dynamic(() => import("./floating-chat").then((m) => m.FloatingChat), { ssr: false });
 
 const PAGE_SIZE = 10;
 

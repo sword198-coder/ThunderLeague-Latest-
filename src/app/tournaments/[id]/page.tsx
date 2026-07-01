@@ -17,8 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 const TournamentChat = dynamic(() => import("@/components/tournament-chat").then((m) => m.TournamentChat), { ssr: false });
-import { JoinDialog } from "@/components/tournaments/join-dialog";
-import { TeamJoinDialog } from "@/components/tournaments/team-join-dialog";
+const JoinDialog = dynamic(() => import("@/components/tournaments/join-dialog").then((m) => m.JoinDialog), { ssr: false });
+const TeamJoinDialog = dynamic(() => import("@/components/tournaments/team-join-dialog").then((m) => m.TeamJoinDialog), { ssr: false });
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import type { ReactNode } from "react";
 

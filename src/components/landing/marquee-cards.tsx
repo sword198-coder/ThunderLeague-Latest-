@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useState, useEffect, type ComponentType } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Play, MessageCircle, Swords, Sparkles, Music2 } from "lucide-react";
@@ -81,19 +80,8 @@ export function MarqueeCards() {
   return (
     <section className="py-12 overflow-hidden bg-muted">
       <div className="relative">
-        <motion.div
-          className="flex gap-6 w-max"
-          animate={{ x: [0, -1920] }}
-          transition={{
-            x: {
-              repeat: Infinity,
-              repeatType: "loop",
-              duration: 30,
-              ease: "linear",
-            },
-          }}
-          whileHover={{ animationPlayState: "paused" }}
-          style={{ animationPlayState: "running" }}
+        <div
+          className="flex gap-6 w-max marquee-scroll"
         >
           {[...cards, ...cards, ...cards].map((card, i) => (
             <Card
@@ -122,7 +110,7 @@ export function MarqueeCards() {
               </CardContent>
             </Card>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
