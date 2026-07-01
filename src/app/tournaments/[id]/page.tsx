@@ -262,13 +262,49 @@ export default function TournamentDetailPage() {
       }
     }, 30000);
 
+    const debounceTimer = { current: null as NodeJS.Timeout | null };
+    const debouncedLoad = () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(load, 400);
+    };
+
     const channel = supabase
       .channel(`tournament-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tournament_matches", filter: `tournament_id=eq.${id}` }, () => { load(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "tournament_participants", filter: `tournament_id=eq.${id}` }, () => { load(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "tournament_matches", filter: `tournament_id=eq.${id}` }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setMatches((prev) => [...prev, payload.new as TournamentMatch]);
+        } else if (payload.eventType === "UPDATE") {
+          setMatches((prev) => prev.map((m) => m.id === payload.new.id ? { ...m, ...payload.new as TournamentMatch } : m));
+        } else if (payload.eventType === "DELETE") {
+          setMatches((prev) => prev.filter((m) => m.id !== payload.old.id));
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "tournament_participants", filter: `tournament_id=eq.${id}` }, (payload) => {
+        if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+          const pNew = payload.new as { user_id: string };
+          supabase.from("profiles").select("id, username, display_name, avatar_url").eq("id", pNew.user_id).single().then(({ data: prof }) => {
+            setParticipants((prev) => {
+              const idx = prev.findIndex((p) => p.user_id === payload.new.user_id);
+              const merged = { ...payload.new as any, name: prof?.display_name || prof?.username || "Unknown", username: prof?.username || "unknown", avatar_url: prof?.avatar_url || null };
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = merged;
+                return copy;
+              }
+              return [...prev, merged];
+            });
+          });
+        } else if (payload.eventType === "DELETE") {
+          setParticipants((prev) => prev.filter((p) => p.user_id !== payload.old.user_id));
+        }
+      })
       .subscribe();
 
-    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+    return () => {
+      clearInterval(interval);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   if (authLoading || loading) {

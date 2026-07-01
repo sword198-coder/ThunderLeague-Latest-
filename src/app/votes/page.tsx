@@ -104,12 +104,44 @@ export default function VotesPage() {
 
     loadData();
 
+    const debounceTimer = { current: null as NodeJS.Timeout | null };
+    const debouncedLoad = () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(loadData, 400);
+    };
+
     const channel = supabase
       .channel("votes-polls")
-      .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, () => { loadData(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "poll_requests" }, () => { loadData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setPolls((prev) => [...prev, payload.new as Poll]);
+        } else if (payload.eventType === "UPDATE") {
+          setPolls((prev) => prev.map((p) => p.id === payload.new.id ? { ...p, ...payload.new as Poll } : p));
+        } else if (payload.eventType === "DELETE") {
+          setPolls((prev) => prev.filter((p) => p.id !== payload.old.id));
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "poll_requests" }, (payload) => {
+        if (payload.eventType === "INSERT" && payload.new.status === "approved") {
+          const r = payload.new as Record<string, unknown>;
+          setPlayerPolls((prev) => [...prev, {
+            id: r.id as string,
+            title: r.title as string,
+            description: r.description as string | null,
+            options: (r.options as string).split("\n").map((s: string) => s.trim()).filter(Boolean),
+            created_at: r.created_at as string,
+          }]);
+        } else if (payload.eventType === "UPDATE") {
+          setPlayerPolls((prev) => prev.filter((p) => p.id !== payload.new.id));
+        } else if (payload.eventType === "DELETE") {
+          setPlayerPolls((prev) => prev.filter((p) => p.id !== payload.old.id));
+        }
+      })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const selectOption = (pollId: string, option: string) => {
