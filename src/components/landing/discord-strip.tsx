@@ -4,15 +4,16 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
-export function DiscordStrip() {
-  const [url, setUrl] = useState("https://discord.gg/thunderleague");
+export function DiscordStrip({ initialUrl }: { initialUrl?: string }) {
+  const [url, setUrl] = useState(initialUrl ?? "https://discord.gg/thunderleague");
 
   useEffect(() => {
+    if (initialUrl) return;
     const supabase = createClient();
     supabase.from("site_settings").select("value").eq("key", "discord_url").single().then(({ data }) => {
       if (data) setUrl(data.value);
     });
-  }, []);
+  }, [initialUrl]);
 
   return (
     <div className="w-full flex flex-col md:flex-row">

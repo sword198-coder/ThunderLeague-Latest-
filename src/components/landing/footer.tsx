@@ -4,13 +4,14 @@ import { Play, MessageCircle, Globe, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function Footer() {
+export function Footer({ initialYoutubeUrl, initialDiscordUrl }: { initialYoutubeUrl?: string; initialDiscordUrl?: string }) {
   const [links, setLinks] = useState({
-    youtube_url: "https://youtube.com",
-    discord_url: "https://discord.gg/thunderleague",
+    youtube_url: initialYoutubeUrl ?? "https://youtube.com",
+    discord_url: initialDiscordUrl ?? "https://discord.gg/thunderleague",
   });
 
   useEffect(() => {
+    if (initialYoutubeUrl && initialDiscordUrl) return;
     const supabase = createClient();
     supabase
       .from("site_settings")
@@ -23,7 +24,7 @@ export function Footer() {
           setLinks((prev) => ({ ...prev, ...map }));
         }
       });
-  }, []);
+  }, [initialYoutubeUrl, initialDiscordUrl]);
 
   return (
     <footer className="border-t border-border bg-muted/30">

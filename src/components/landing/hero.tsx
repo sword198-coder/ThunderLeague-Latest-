@@ -7,14 +7,14 @@ import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-export function Hero() {
+export function Hero({ initialImages, initialInterval }: { initialImages?: string[]; initialInterval?: number }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [images, setImages] = useState<string[]>(["/hero.png"]);
+  const [images, setImages] = useState<string[]>(initialImages ?? ["/hero.png"]);
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const imgLenRef = useRef(1);
-  const msRef = useRef(5000);
+  const imgLenRef = useRef(initialImages?.length ?? 1);
+  const msRef = useRef((initialInterval ?? 5) * 1000);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
 
   const startTimer = () => {
@@ -25,13 +25,15 @@ export function Hero() {
   };
 
   useEffect(() => {
+    if (initialImages) {
+      if (initialImages.length > 1) startTimer();
+      return;
+    }
     const supabase = createClient();
     supabase.from("site_settings").select("key, value").in("key", ["hero_images", "hero_interval"]).then(({ data }) => {
       if (!data) return;
-
       const map: Record<string, string> = {};
       data.forEach((s) => (map[s.key] = s.value));
-
       let imgs = ["/hero.png"];
       if (map.hero_images) {
         try {
@@ -41,17 +43,14 @@ export function Hero() {
       }
       setImages(imgs);
       imgLenRef.current = imgs.length;
-
       if (map.hero_interval) {
         const v = parseInt(map.hero_interval) * 1000;
         if (v > 0) msRef.current = v;
       }
-
       startTimer();
     });
-
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+  }, [initialImages, initialInterval]);
 
   useEffect(() => { startTimer(); }, [isPaused]);
 

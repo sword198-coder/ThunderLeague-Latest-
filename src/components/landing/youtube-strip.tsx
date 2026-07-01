@@ -4,15 +4,16 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
-export function YouTubeStrip() {
-  const [url, setUrl] = useState("https://youtube.com");
+export function YouTubeStrip({ initialUrl }: { initialUrl?: string }) {
+  const [url, setUrl] = useState(initialUrl ?? "https://youtube.com");
 
   useEffect(() => {
+    if (initialUrl) return;
     const supabase = createClient();
     supabase.from("site_settings").select("value").eq("key", "youtube_url").single().then(({ data }) => {
       if (data) setUrl(data.value);
     });
-  }, []);
+  }, [initialUrl]);
 
   return (
     <div className="w-full flex flex-col md:flex-row">

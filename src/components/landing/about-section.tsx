@@ -4,17 +4,18 @@ import { useState, useEffect } from "react";
 import { Trophy, Swords, BarChart3, Users, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export function AboutSection() {
+export function AboutSection({ initialAboutText }: { initialAboutText?: string }) {
   const [aboutText, setAboutText] = useState(
-    "BPL is the ultimate War Thunder tournament platform. Compete against the best players, climb the leaderboard, and prove your skills in epic aerial and ground battles."
+    initialAboutText ?? "BPL is the ultimate War Thunder tournament platform. Compete against the best players, climb the leaderboard, and prove your skills in epic aerial and ground battles."
   );
 
   useEffect(() => {
+    if (initialAboutText) return;
     const supabase = createClient();
     supabase.from("site_settings").select("value").eq("key", "about_text").single().then(({ data }) => {
       if (data) setAboutText(data.value);
     });
-  }, []);
+  }, [initialAboutText]);
 
   const features = [
     { icon: Swords, label: "Weekly Tournaments", desc: "Compete in regular 1v1 and 4v4 tournaments" },

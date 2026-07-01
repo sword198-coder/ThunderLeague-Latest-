@@ -4,15 +4,16 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
-export function TikTokStrip() {
-  const [url, setUrl] = useState("https://tiktok.com/@thunderleague");
+export function TikTokStrip({ initialUrl }: { initialUrl?: string }) {
+  const [url, setUrl] = useState(initialUrl ?? "https://tiktok.com/@thunderleague");
 
   useEffect(() => {
+    if (initialUrl) return;
     const supabase = createClient();
     supabase.from("site_settings").select("value").eq("key", "tiktok_url").single().then(({ data }) => {
       if (data) setUrl(data.value);
     });
-  }, []);
+  }, [initialUrl]);
 
   return (
     <div className="w-full flex flex-col md:flex-row">

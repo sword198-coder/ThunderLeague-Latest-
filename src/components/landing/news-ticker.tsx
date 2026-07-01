@@ -4,21 +4,25 @@ import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export function NewsTicker() {
-  const [items, setItems] = useState<string[]>(["Welcome to BPL — tournaments are now open!"]);
+export function NewsTicker({ initialItems, initialInterval }: { initialItems?: string[]; initialInterval?: number }) {
+  const [items, setItems] = useState<string[]>(initialItems ?? ["Welcome to BPL — tournaments are now open!"]);
   const [current, setCurrent] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
-  const lenRef = useRef(1);
-  const msRef = useRef(5000);
+  const lenRef = useRef(initialItems?.length ?? 1);
+  const msRef = useRef((initialInterval ?? 5) * 1000);
 
   useEffect(() => {
+    if (initialItems) {
+      if (initialItems.length > 1) {
+        timerRef.current = setInterval(() => setCurrent((prev) => (prev + 1) % lenRef.current), msRef.current);
+      }
+      return;
+    }
     const supabase = createClient();
     supabase.from("site_settings").select("key, value").in("key", ["news_items", "news_interval"]).then(({ data }) => {
       if (!data) return;
-
       const map: Record<string, string> = {};
       data.forEach((s) => (map[s.key] = s.value));
-
       let arr = ["Welcome to BPL — tournaments are now open!"];
       if (map.news_items) {
         try {
@@ -28,19 +32,16 @@ export function NewsTicker() {
       }
       setItems(arr);
       lenRef.current = arr.length;
-
       if (map.news_interval) {
         const v = parseInt(map.news_interval) * 1000;
         if (v > 0) msRef.current = v;
       }
-
       if (arr.length > 1) {
         timerRef.current = setInterval(() => setCurrent((prev) => (prev + 1) % lenRef.current), msRef.current);
       }
     });
-
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+  }, [initialItems, initialInterval]);
 
   const move = (dir: number) => setCurrent((prev) => (prev + dir + items.length) % items.length);
 

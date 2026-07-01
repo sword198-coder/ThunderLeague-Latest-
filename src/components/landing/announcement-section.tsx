@@ -4,15 +4,16 @@ import { useState, useEffect } from "react";
 import { Play, Globe } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export function AnnouncementSection() {
-  const [trailerUrl, setTrailerUrl] = useState("");
+export function AnnouncementSection({ initialTrailerUrl }: { initialTrailerUrl?: string }) {
+  const [trailerUrl, setTrailerUrl] = useState(initialTrailerUrl ?? "");
 
   useEffect(() => {
+    if (initialTrailerUrl) return;
     const supabase = createClient();
     supabase.from("site_settings").select("value").eq("key", "trailer_url").single().then(({ data }) => {
       if (data) setTrailerUrl(data.value);
     });
-  }, []);
+  }, [initialTrailerUrl]);
 
   const getEmbedUrl = (url: string) => {
     if (!url) return null;

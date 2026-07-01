@@ -1,26 +1,13 @@
-"use client";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { LandingClient } from "./landing-client";
 
-import { Hero } from "@/components/landing/hero";
-import { NewsTicker } from "@/components/landing/news-ticker";
-import { AnnouncementSection } from "@/components/landing/announcement-section";
-import { YouTubeStrip } from "@/components/landing/youtube-strip";
-import { DiscordStrip } from "@/components/landing/discord-strip";
-import { TikTokStrip } from "@/components/landing/tiktok-strip";
-import { AboutSection } from "@/components/landing/about-section";
-import { Footer } from "@/components/landing/footer";
+export const revalidate = 3600;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase.from("site_settings").select("key, value");
+  const settings: Record<string, string> = {};
+  data?.forEach((s) => { settings[s.key] = s.value; });
 
-  return (
-    <>
-      <Hero />
-      <NewsTicker />
-      <AnnouncementSection />
-      <YouTubeStrip />
-      <DiscordStrip />
-      <TikTokStrip />
-      <AboutSection />
-      <Footer />
-    </>
-  );
+  return <LandingClient settings={settings} />;
 }
