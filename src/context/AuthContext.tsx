@@ -67,16 +67,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let supabase: ReturnType<typeof createClient>;
+    let heartbeatInterval: NodeJS.Timeout;
 
-    // Heartbeat: update last_active_at every 30 seconds
-    const heartbeatInterval = setInterval(async () => {
-      const sb = supabaseRef.current;
-      if (!sb) return;
-      const { data: { user } } = await sb.auth.getUser();
-      if (user) {
-        await sb.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", user.id);
+    const startHeartbeat = () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      heartbeatInterval = setInterval(async () => {
+        const sb = supabaseRef.current;
+        if (!sb) return;
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          await sb.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", user.id);
+        }
+      }, 30000);
+    };
+
+    const stopHeartbeat = () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopHeartbeat();
+      } else {
+        startHeartbeat();
       }
-    }, 30000);
+    };
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibilityChange);
+    }
+
+    startHeartbeat();
 
     try {
       supabase = createClient();
@@ -140,7 +161,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       clearTimeout(timerRef.current);
-      clearInterval(heartbeatInterval);
+      stopHeartbeat();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+      }
       subscription?.unsubscribe();
     };
   }, []);
