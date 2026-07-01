@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
 import { Trophy, Swords, BarChart3, Info, Crown } from "lucide-react";
 import {
@@ -115,6 +116,14 @@ export function LeaderboardClient({
   }
 
   const top3 = filteredEntries.slice(0, 3);
+  const tableRows = useMemo(() => filteredEntries.slice(3), [filteredEntries]);
+  const tableParentRef = useRef<HTMLDivElement>(null);
+  const tableVirtualizer = useVirtualizer({
+    count: tableRows.length,
+    getScrollElement: () => tableParentRef.current,
+    estimateSize: () => 53,
+    overscan: 5,
+  });
 
   const podiumSlots = [
     { idx: 1, color: "bg-gray-300", borderColor: "#94a3b8", height: "h-24", label: "#2" },
@@ -203,50 +212,68 @@ export function LeaderboardClient({
             </TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {filteredEntries.slice(3).map((entry) => (
-            <TableRow key={entry.id}>
-              <TableCell className="text-center font-medium">
-                {entry.rank <= 3 ? (
-                  <span className="text-lg">
-                    {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : "🥉"}
-                  </span>
-                ) : (
-                  entry.rank
-                )}
-              </TableCell>
-              <TableCell className="font-medium">
-                <button
-                  onClick={() => setSelectedPlayer({ data: entry, profile: findProfile(entry) })}
-                  className="hover:underline text-left cursor-pointer"
-                >
-                  {entry.player_name}
-                </button>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-muted-foreground">
-                {entry.squadron_name ?? "—"}
-              </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">
-                {entry.battle_rating}
-              </TableCell>
-              <TableCell className="text-right font-bold">{entry.score.toLocaleString()}</TableCell>
-              <TableCell className="hidden sm:table-cell text-right text-green-600">
-                {entry.wins}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-right text-red-500">
-                {entry.losses}
-              </TableCell>
-            </TableRow>
-          ))}
-          {filteredEntries.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                No entries in this tier
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
       </Table>
+      <div ref={tableParentRef} className="overflow-auto" style={{ maxHeight: "60vh" }}>
+        <div style={{ height: `${tableVirtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
+          <Table>
+            <TableBody>
+              {tableVirtualizer.getVirtualItems().map((virtualItem) => {
+                const entry = tableRows[virtualItem.index];
+                return (
+                  <TableRow
+                    key={entry.id}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <TableCell className="text-center font-medium">
+                      {entry.rank <= 3 ? (
+                        <span className="text-lg">
+                          {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : "🥉"}
+                        </span>
+                      ) : (
+                        entry.rank
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <button
+                        onClick={() => setSelectedPlayer({ data: entry, profile: findProfile(entry) })}
+                        className="hover:underline text-left cursor-pointer"
+                      >
+                        {entry.player_name}
+                      </button>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground">
+                      {entry.squadron_name ?? "—"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">
+                      {entry.battle_rating}
+                    </TableCell>
+                    <TableCell className="text-right font-bold">{entry.score.toLocaleString()}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-right text-green-600">
+                      {entry.wins}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right text-red-500">
+                      {entry.losses}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {filteredEntries.length <= 3 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    No entries in this tier
+                    </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
       <PlayerCard
         data={selectedPlayer ? { player_name: selectedPlayer.data.player_name, wins: selectedPlayer.data.wins, losses: selectedPlayer.data.losses, score: selectedPlayer.data.score, profile: selectedPlayer.profile } : null}
