@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, Loader2, Dot } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Users, Loader2, Dot, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { CreatePost } from "./create-post";
 import { PostCard } from "./post-card";
 import { FloatingChat } from "./floating-chat";
 import type { Profile, Post, PostLike } from "@/lib/types";
+
+const PAGE_SIZE = 10;
 
 type PostWithExtras = Post & { profile?: Profile; likes?: PostLike[]; like_count?: number; comment_count?: number };
 
@@ -17,63 +20,94 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
   const { user, profile: myProfile } = useAuth();
   const [posts, setPosts] = useState<PostWithExtras[]>([]);
   const [followers, setFollowers] = useState<Profile[]>([]);
-
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const supabase = createClient();
 
-  const loadPosts = async () => {
+  const fetchFollowedIds = useCallback(async () => {
+    if (!user) return [];
+    const { data } = await supabase.from("follows").select("following_id").eq("follower_id", user.id);
+    return [user.id, ...(data?.map((f) => f.following_id) || [])];
+  }, [user]);
+
+  const enrichPosts = useCallback(async (postsData: Post[]) => {
+    if (postsData.length === 0) return [];
+    const postIds = postsData.map((p) => p.id);
+    const userIds = [...new Set(postsData.map((p) => p.user_id))];
+    const [{ data: profilesData }, { data: likesData }, { data: commentsData }] = await Promise.all([
+      supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", userIds),
+      supabase.from("post_likes").select("*").in("post_id", postIds),
+      supabase.from("post_comments").select("post_id").in("post_id", postIds),
+    ]);
+    const profileMap = new Map(profilesData?.map((p) => [p.id, p]) || []);
+    const likeCounts: Record<string, number> = {};
+    likesData?.forEach((l) => { likeCounts[l.post_id] = (likeCounts[l.post_id] || 0) + 1; });
+    const commentCounts: Record<string, number> = {};
+    commentsData?.forEach((c) => { commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1; });
+    return postsData.map((p) => ({
+      ...p,
+      profile: profileMap.get(p.user_id) as Profile | undefined,
+      likes: likesData?.filter((l) => l.post_id === p.id) || [],
+      like_count: likeCounts[p.id] || 0,
+      comment_count: commentCounts[p.id] || 0,
+    }) as PostWithExtras);
+  }, []);
+
+  const loadPosts = useCallback(async (showLoader = true) => {
     if (!user) return;
-
-    const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", user.id);
-    const followedIds = follows?.map((f) => f.following_id) || [];
-    const visibleIds = [user.id, ...followedIds];
-
+    if (showLoader) setLoading(true);
+    const visibleIds = await fetchFollowedIds();
     const { data: postsData } = await supabase
       .from("posts")
       .select("*")
       .in("user_id", visibleIds)
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range(0, PAGE_SIZE - 1);
+    const enriched = await enrichPosts(postsData || []);
+    setPosts(enriched);
+    setHasMore((postsData?.length ?? 0) >= PAGE_SIZE);
+    if (showLoader) setLoading(false);
+  }, [user, fetchFollowedIds, enrichPosts]);
 
-    if (postsData && postsData.length > 0) {
-      const postIds = postsData.map((p) => p.id);
-      const userIds = [...new Set(postsData.map((p) => p.user_id))];
+  const loadMorePosts = useCallback(async () => {
+    if (!user || loadingMore) return;
+    setLoadingMore(true);
+    const visibleIds = await fetchFollowedIds();
+    const { data: postsData } = await supabase
+      .from("posts")
+      .select("*")
+      .in("user_id", visibleIds)
+      .order("created_at", { ascending: false })
+      .range(posts.length, posts.length + PAGE_SIZE - 1);
+    const enriched = await enrichPosts(postsData || []);
+    setPosts((prev) => [...prev, ...enriched]);
+    setHasMore((postsData?.length ?? 0) >= PAGE_SIZE);
+    setLoadingMore(false);
+  }, [user, fetchFollowedIds, enrichPosts, posts.length, loadingMore]);
 
-      const { data: profilesData } = await supabase.from("profiles").select("id, username, display_name, avatar_url").in("id", userIds);
-      const profileMap = new Map(profilesData?.map((p) => [p.id, p]) || []);
+  const updatePost = useCallback((updatedPost: PostWithExtras) => {
+    setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
+  }, []);
 
-      const { data: likesData } = await supabase.from("post_likes").select("*").in("post_id", postIds);
-      const { data: commentsData } = await supabase.from("post_comments").select("post_id").in("post_id", postIds);
+  const refreshFirstPage = useCallback(() => { loadPosts(false); }, [loadPosts]);
 
-      const likeCounts: Record<string, number> = {};
-      likesData?.forEach((l) => { likeCounts[l.post_id] = (likeCounts[l.post_id] || 0) + 1; });
-      const commentCounts: Record<string, number> = {};
-      commentsData?.forEach((c) => { commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1; });
+  useEffect(() => { loadPosts(); }, [loadPosts]);
 
-      setPosts(postsData.map((p) => ({
-        ...p,
-        profile: profileMap.get(p.user_id),
-        likes: likesData?.filter((l) => l.post_id === p.id) || [],
-        like_count: likeCounts[p.id] || 0,
-        comment_count: commentCounts[p.id] || 0,
-      })));
-    } else {
-      setPosts([]);
-    }
-
-    // Followers
-    const { data: followerData } = await supabase.from("follows").select("follower_id").eq("following_id", user.id);
-    const followerIds = followerData?.map((f) => f.follower_id) || [];
-    if (followerIds.length > 0) {
-      const { data: followerProfiles } = await supabase.from("profiles").select("id, username, display_name, avatar_url, last_active_at").in("id", followerIds);
-      setFollowers((followerProfiles || []) as Profile[]);
-
-    }
-
-    setLoading(false);
-  };
-
-  useEffect(() => { loadPosts(); }, [user]);
+  // Followers
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("follows").select("follower_id").eq("following_id", user.id).then(({ data }) => {
+      const followerIds = data?.map((f) => f.follower_id) || [];
+      if (followerIds.length > 0) {
+        supabase.from("profiles").select("id, username, display_name, avatar_url, last_active_at").in("id", followerIds).then(({ data: profiles }) => {
+          setFollowers((profiles || []) as Profile[]);
+        });
+      } else {
+        setFollowers([]);
+      }
+    });
+  }, [user]);
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -142,7 +176,7 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
 
       {/* Center — Feed */}
       <div className="lg:col-span-8 space-y-3">
-        <CreatePost onPostCreated={loadPosts} />
+        <CreatePost onPostCreated={refreshFirstPage} />
 
         {posts.length === 0 ? (
           <Card className="border-border/40 rounded-2xl">
@@ -151,9 +185,19 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
             </div>
           </Card>
         ) : (
-          posts.map((post) => (
-            <PostCard key={post.id} post={post} onUpdate={loadPosts} onViewProfile={onViewProfile} />
-          ))
+          <>
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} onUpdate={refreshFirstPage} onViewProfile={onViewProfile} />
+            ))}
+            {hasMore && (
+              <div className="flex justify-center pt-2">
+                <Button variant="outline" size="sm" onClick={loadMorePosts} disabled={loadingMore} className="gap-2">
+                  {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+                  {loadingMore ? "Loading..." : "Load More"}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
