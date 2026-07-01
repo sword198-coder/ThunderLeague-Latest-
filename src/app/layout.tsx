@@ -8,6 +8,7 @@ import { AnnouncementModal } from "@/components/announcement-modal";
 import { BanNotice } from "@/components/ban-notice";
 import { WarningAlert } from "@/components/warning-alert";
 import { QueryProvider } from "@/lib/query-provider";
+import { WebVitals } from "@/components/web-vitals";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <QueryProvider>
+          <WebVitals />
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>

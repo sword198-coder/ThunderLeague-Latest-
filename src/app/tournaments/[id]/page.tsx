@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass, MessageCircle, X, Play, Music, Monitor, Globe, ArrowRight, Shield, Target, Zap, AlertCircle, Info } from "lucide-react";
+import { Trophy, Calendar, Swords, Users, Clock, ChevronLeft, CheckCircle2, XCircle, Hourglass, MessageCircle, X, Play, Music, Monitor, Globe, ArrowRight, Shield, Target, Zap, AlertCircle, Info } from "lucide-react";
 import { format, differenceInHours } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +20,7 @@ const TournamentChat = dynamic(() => import("@/components/tournament-chat").then
 const JoinDialog = dynamic(() => import("@/components/tournaments/join-dialog").then((m) => m.JoinDialog), { ssr: false });
 const TeamJoinDialog = dynamic(() => import("@/components/tournaments/team-join-dialog").then((m) => m.TeamJoinDialog), { ssr: false });
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ReactNode } from "react";
 
 const MODE_LABELS: Record<string, string> = { air: "Air", ground: "Ground", both: "Air & Ground" };
@@ -309,8 +310,15 @@ export default function TournamentDetailPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+        </div>
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
       </div>
     );
   }

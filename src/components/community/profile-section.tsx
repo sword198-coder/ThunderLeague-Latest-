@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Calendar, Loader2, MapPin, UserPlus, UserCheck, MessageCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, MapPin, UserPlus, UserCheck, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -85,7 +86,13 @@ export function ProfileSection({ viewUserId, onViewProfile }: { viewUserId?: str
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (loading) return (
+    <div className="space-y-4">
+      <Skeleton className="h-48 rounded-2xl" />
+      <Skeleton className="h-32 rounded-2xl" />
+      <Skeleton className="h-52 rounded-2xl" />
+    </div>
+  );
 
   const p = profile;
   const initials = p?.display_name?.slice(0, 2).toUpperCase() || p?.username?.slice(0, 2).toUpperCase() || "??";

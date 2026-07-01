@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Users, Loader2, Dot, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import dynamic from "next/dynamic";
@@ -112,7 +113,19 @@ export function HomeFeed({ onViewProfile }: { onViewProfile?: (userId: string) =
   }, [user]);
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="hidden lg:flex lg:col-span-4 flex-col gap-4">
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+        </div>
+        <div className="lg:col-span-8 space-y-4">
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-52 rounded-2xl" />
+          <Skeleton className="h-52 rounded-2xl" />
+        </div>
+      </div>
+    );
   }
 
   const myInitials = myProfile?.display_name?.slice(0, 2).toUpperCase() || myProfile?.username?.slice(0, 2).toUpperCase() || "?";
