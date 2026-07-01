@@ -174,18 +174,16 @@ export function SignUpForm() {
   };
 
   const onSubmitProfile = async (data: ProfileData) => {
-    const { error } = await supabase
-      .from("profiles")
-      .upsert({
-        id: userId,
-        war_thunder_username: data.war_thunder_username,
-        squadron_name: data.squadron_name,
-        discord_username: data.discord_username,
-        nationality: data.nationality,
-      });
+    const { error } = await supabase.rpc("upsert_own_profile", {
+      p_id: userId,
+      p_war_thunder_username: data.war_thunder_username || null,
+      p_squadron_name: data.squadron_name || null,
+      p_discord_username: data.discord_username || null,
+      p_nationality: data.nationality || null,
+    });
 
     if (error) {
-      toast.error("Failed to save profile details");
+      toast.error("Failed to save profile details: " + error.message);
       return;
     }
 
