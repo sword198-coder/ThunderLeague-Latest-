@@ -19,6 +19,7 @@ import { MaintenanceGuard } from "@/components/maintenance-guard";
 import type { LeaderboardEntry, Profile, CardBackground, CardTitle } from "@/lib/types";
 
 const TIERS = [
+  { key: "top", label: "TOP" },
   { key: "high", label: "HIGH" },
   { key: "mid", label: "MID" },
   { key: "low", label: "LOW" },
